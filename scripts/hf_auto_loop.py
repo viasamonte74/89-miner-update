@@ -126,9 +126,12 @@ STRICT_MIN_SCORE = float(os.environ.get("SN89_STRICT_MIN_SCORE", "1.25"))
 PAIR_LOCK_S = float(os.environ.get("SN89_PAIR_LOCK_S", str(hf_mod.PAIR_LOCK_S)))
 # Prefer faster 30m horizons when scoring equal
 PREFER_HZ_S = int(os.environ.get("SN89_HF_PREFER_HZ_S", "1800"))
-# Stale bars kill fade edge (~50.9% → 50.1% at +5m). Refresh ≤60s; live quotes fill gaps.
+# Archive 1m bars often lag ~10–15m; live quotes + hist cover the tip.
+# BAR_MAX_AGE_MIN: trigger refresh / "parquet fresh" threshold.
+# BAR_HARD_MAX_AGE_MIN: refuse to score if parquet older than this (even with live).
 BAR_REFRESH_S = float(os.environ.get("SN89_HF_BAR_REFRESH_S", "60"))
-BAR_MAX_AGE_MIN = float(os.environ.get("SN89_HF_BAR_MAX_AGE_MIN", "2"))
+BAR_MAX_AGE_MIN = float(os.environ.get("SN89_HF_BAR_MAX_AGE_MIN", "12"))
+BAR_HARD_MAX_AGE_MIN = float(os.environ.get("SN89_HF_BAR_HARD_MAX_AGE_MIN", "45"))
 # Diversity guard (P0): stay above floor+margin before n hits the hard gate.
 DIVERSITY_GUARD = os.environ.get("SN89_HF_DIVERSITY_GUARD", "1").strip() not in (
     "0",
@@ -674,12 +677,16 @@ def _series_for_score(
             return None
         cache[pair] = series
     t_ms, close = cache[pair]
+    # Overlay any accumulated live hist so wall-clock fade windows can anchor.
+    t_ms, close = hf_live_quotes.merge_hist_into_series(
+        t_ms, close, pair, decision_ms=int(now * 1000)
+    )
     if live_quote:
         t_ms, close = hf_live_quotes.append_live_to_series(t_ms, close, live_quote)
-        cache[pair] = (t_ms, close)
         decision_ms = int(live_quote["t_ms"])
     else:
         decision_ms = int(now * 1000)
+    cache[pair] = (t_ms, close)
     return t_ms, close, decision_ms
 
 
@@ -889,6 +896,7 @@ def run(
     hk = w.hotkey.ss58_address
     cache: dict = {}
     last_bar_refresh = 0.0
+    last_bypass_log = 0.0
     _log(
         {
             "event": "start",
@@ -971,16 +979,18 @@ def run(
 
         ages = [a for a in (_bars_age_min(p) for p in pairs) if a is not None]
         age = (sorted(ages)[len(ages) // 2] if ages else None)  # median of known pairs
-        fresh_n = sum(1 for a in ages if a <= BAR_MAX_AGE_MIN * 3)
+        fresh_n = sum(1 for a in ages if a <= BAR_MAX_AGE_MIN)
+        # Refresh when due, but skip thrash if archive cannot beat BAR_MAX_AGE
+        # (refresh still runs on the interval so new minutes land when available).
         if now - last_bar_refresh >= BAR_REFRESH_S or (
-            age is not None and age > BAR_MAX_AGE_MIN
+            age is not None and age > BAR_MAX_AGE_MIN and now - last_bar_refresh >= 60.0
         ):
             try:
                 _refresh_bars(pairs)
                 last_bar_refresh = time.time()
                 ages = [a for a in (_bars_age_min(p) for p in pairs) if a is not None]
                 age = sorted(ages)[len(ages) // 2] if ages else None
-                fresh_n = sum(1 for a in ages if a <= BAR_MAX_AGE_MIN * 3)
+                fresh_n = sum(1 for a in ages if a <= BAR_MAX_AGE_MIN)
             except Exception as e:  # noqa: BLE001
                 _log(
                     {
@@ -991,14 +1001,35 @@ def run(
                 )
                 last_bar_refresh = now
             cache.clear()
-        # Need a majority of specialized pairs fresh — not one quiet lead pair.
-        if not ages or fresh_n < max(1, (len(pairs) + 1) // 2):
+        # Hard ceiling: parquet too old to trust σ / lookback.
+        if not ages or age is None or age > BAR_HARD_MAX_AGE_MIN:
             _sleep(
                 poll_s,
                 f"bars_stale_or_missing median={round(age, 1) if age is not None else None} "
+                f"fresh={fresh_n}/{len(pairs)} hard_max={BAR_HARD_MAX_AGE_MIN}",
+            )
+            continue
+        # Soft freshness: need majority fresh parquet OR live quotes enabled
+        # (live tip + hist / bridge covers the decision price).
+        need_fresh = max(1, (len(pairs) + 1) // 2)
+        if fresh_n < need_fresh and not LIVE_QUOTES:
+            _sleep(
+                poll_s,
+                f"bars_stale_or_missing median={round(age, 1)} "
                 f"fresh={fresh_n}/{len(pairs)}",
             )
             continue
+        if fresh_n < need_fresh and LIVE_QUOTES and now - last_bypass_log >= 120.0:
+            last_bypass_log = now
+            _log(
+                {
+                    "event": "bars_lag_live_bypass",
+                    "median_age_min": round(age, 1),
+                    "fresh": fresh_n,
+                    "n_pairs": len(pairs),
+                    "hard_max": BAR_HARD_MAX_AGE_MIN,
+                }
+            )
 
         lf_locked = _lf_locked_pairs_for_hotkey(now)
         own_open = _own_open_pairs(now)
@@ -1071,21 +1102,35 @@ def run(
                 )
                 continue
             pair_age = _bars_age_min(r["pair"])
-            if pair_age is None or pair_age > BAR_MAX_AGE_MIN * 3:
-                if not (LIVE_QUOTES and r.get("live_quote")):
-                    _log(
-                        {
-                            "event": "skip_pair_bars_stale",
-                            "pair": r["pair"],
-                            "bars_age_min": None
-                            if pair_age is None
-                            else round(pair_age, 1),
-                            "diversity_share": cur_div.get("share"),
-                            "diversity_floor": cur_div.get("floor"),
-                            "n": cur_div.get("n"),
-                        }
-                    )
-                    continue
+            if pair_age is None or pair_age > BAR_HARD_MAX_AGE_MIN:
+                _log(
+                    {
+                        "event": "skip_pair_bars_stale",
+                        "pair": r["pair"],
+                        "bars_age_min": None
+                        if pair_age is None
+                        else round(pair_age, 1),
+                        "hard_max": BAR_HARD_MAX_AGE_MIN,
+                        "diversity_share": cur_div.get("share"),
+                        "diversity_floor": cur_div.get("floor"),
+                        "n": cur_div.get("n"),
+                    }
+                )
+                continue
+            if pair_age > BAR_MAX_AGE_MIN and not (
+                LIVE_QUOTES and r.get("live_quote")
+            ):
+                _log(
+                    {
+                        "event": "skip_pair_bars_stale",
+                        "pair": r["pair"],
+                        "bars_age_min": round(pair_age, 1),
+                        "diversity_share": cur_div.get("share"),
+                        "diversity_floor": cur_div.get("floor"),
+                        "n": cur_div.get("n"),
+                    }
+                )
+                continue
             allow, _cur, proj = fleet_hf_diversity.diversity_guard_allows(
                 subs,
                 r,

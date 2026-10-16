@@ -62,3 +62,37 @@ def test_near_dup_dedupe_key_buckets():
     c = (1_005_000, "SUIUSD", "LONG", 1800.0)  # +5s → different bucket
     assert g._dedupe_key(a) != g._dedupe_key(c)
     assert g._near_dup(a, (1_004_000, "SUIUSD", "LONG", 1800.0))
+
+
+def test_wall_clock_spike_with_live_hist_gap():
+    """Dense hist over last 5m after a lagging parquet tip → wall-clock z."""
+    t0 = 1_700_000_000_000
+    # Parquet ends 12 minutes before "now"
+    n = 120
+    t_bars = np.arange(n, dtype=np.int64) * 60_000 + t0
+    close = np.full(n, 100.0, dtype=np.float64)
+    rng = np.random.default_rng(1)
+    close *= np.exp(np.cumsum(rng.normal(0, 0.0004, size=n)))
+    now = int(t_bars[-1] + 12 * 60_000)
+    # Live hist: flat then sharp up in last 5 minutes
+    hist_t = [now - (5 - i) * 60_000 for i in range(6)]
+    hist_c = [100.0] * 5 + [100.0 * math.exp(0.04)]
+    t_ms = np.concatenate([t_bars, np.asarray(hist_t, dtype=np.int64)])
+    c = np.concatenate([close, np.asarray(hist_c, dtype=np.float64)])
+    out = fs.fade_direction(t_ms, c, now, window_min=5, min_abs_z=2.0)
+    assert out is not None
+    assert out["direction"] == "SHORT"
+
+
+def test_bridge_append_live():
+    import hf_live_quotes as lq
+
+    t0 = 1_700_000_000_000
+    t = np.array([t0], dtype=np.int64)
+    c = np.array([100.0], dtype=np.float64)
+    # 11 minutes later
+    qt = t0 + 11 * 60_000
+    t2, c2 = lq.append_live_to_series(t, c, {"t_ms": qt, "price": 101.0})
+    assert int(t2[-1]) == qt
+    assert float(c2[-1]) == 101.0
+    assert len(t2) > 2  # bridged minutes
