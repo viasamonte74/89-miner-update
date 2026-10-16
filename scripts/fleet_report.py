@@ -62,8 +62,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FAIL {name}: {e}")
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     path = out_dir / f"fleet_report_{stamp}.json"
-    prev = sorted(out_dir.glob("fleet_report_*.json"))
-    prev_path = prev[-1] if prev else None
+    # Previous = newest report strictly older than this write (exclude latest symlink name).
+    prev_candidates = sorted(
+        (
+            p
+            for p in out_dir.glob("fleet_report_*.json")
+            if p.name != "fleet_report_latest.json"
+        ),
+        key=lambda p: p.stat().st_mtime,
+    )
+    prev_path = prev_candidates[-1] if prev_candidates else None
     payload = {
         "ts": time.time(),
         "utc": stamp,

@@ -57,18 +57,30 @@ export SN89_DATA_ROOT SN89_STATE_DIR SN89_REPO SN89_PY
 "$SN89_PY" - <<PY
 import json, time
 from pathlib import Path
+import bittensor as bt
+
+def ss58(name):
+    try:
+        return bt.Wallet(name="rabi", hotkey=name).hotkey.ss58_address
+    except Exception:
+        return ""
+
+hk_map = {k: ss58(k) for k in ("rabi-h1", "rabi-h2", "rabi-h3", "rabi-h4")}
+log_hk = {
+    Path("$LOG_H1"): hk_map["rabi-h1"],
+    Path("$LOG_H2"): hk_map["rabi-h2"],
+    Path("$LOG_H3"): hk_map["rabi-h3"],
+    Path("$LOG_H4"): hk_map["rabi-h4"],
+    Path("$HF_LOG_H1"): hk_map["rabi-h1"],
+    Path("$HF_LOG_H2"): hk_map["rabi-h2"],
+    Path("$HF_LOG_H3"): hk_map["rabi-h3"],
+    Path("$HF_LOG_H4"): hk_map["rabi-h4"],
+}
 claim_dir = Path("$SN89_DATA_ROOT/fleet_claims")
 claim_dir.mkdir(parents=True, exist_ok=True)
-logs = {
-    "h1": Path("$LOG_H1"),
-    "h2": Path("$LOG_H2"),
-    "h3": Path("$LOG_H3"),
-}
-if Path("$LOG_H4").exists():
-    logs["h4"] = Path("$LOG_H4")
 now = time.time()
-for path in logs.values():
-    if not path.exists():
+for path, hotkey in list(log_hk.items())[:4]:
+    if not path.exists() or not hotkey:
         continue
     for line in path.read_text(encoding="utf-8").splitlines():
         try:
@@ -88,7 +100,7 @@ for path in logs.values():
         payload = {
             "pair": pair,
             "direction": direction,
-            "hotkey": o.get("hotkey") or "",
+            "hotkey": hotkey,
             "ts": ts,
             "until": ts + 8 * 3600,
             "log": str(path),
@@ -97,15 +109,8 @@ for path in logs.values():
 print("seeded LF claims:", sorted(p.name for p in claim_dir.glob("*.json")))
 hf_claim = Path("$SN89_DATA_ROOT/hf_fleet_claims")
 hf_claim.mkdir(parents=True, exist_ok=True)
-hf_logs = {
-    "h1": Path("$HF_LOG_H1"),
-    "h2": Path("$HF_LOG_H2"),
-    "h3": Path("$HF_LOG_H3"),
-}
-if Path("$HF_LOG_H4").exists():
-    hf_logs["h4"] = Path("$HF_LOG_H4")
-for path in hf_logs.values():
-    if not path.exists():
+for path, hotkey in list(log_hk.items())[4:]:
+    if not path.exists() or not hotkey:
         continue
     for line in path.read_text(encoding="utf-8").splitlines():
         try:
@@ -126,7 +131,7 @@ for path in hf_logs.values():
         payload = {
             "pair": pair,
             "direction": direction,
-            "hotkey": o.get("hotkey") or "",
+            "hotkey": hotkey,
             "ts": ts,
             "until": ts + hz,
             "log": str(path),
@@ -189,10 +194,15 @@ start_hf() {
   SN89_STRICT_MODE="$strict" \
   SN89_STRICT_BOTH_DIRS=1 \
   SN89_HF_DIVERSITY_GUARD=1 \
+  SN89_HF_DIVERSITY_GUARD_MODE=improve \
   SN89_HF_DIVERSITY_MARGIN=0.05 \
   SN89_HF_ALLOW_MINORITY_EDGE=1 \
-  SN89_HF_BLOCK_SIBLING_OPPOSITE=1 \
+  SN89_HF_BLOCK_SIBLING_OPPOSITE=0 \
   SN89_HF_REJECT_COOLDOWN_S=900 \
+  SN89_HF_LIVE_QUOTES=1 \
+  SN89_HF_MAX_HORIZON_S=1800 \
+  SN89_HF_AUTO_PAIRS=SUIUSD,ALGOUSD,ADAUSD,KPEPEUSD,NEARUSD \
+  SN89_HF_MAX_PER_DAY=10 \
   pm2 start "$SN89_REPO/scripts/pm2_hf_auto.sh" \
     --name "$name" \
     --interpreter bash

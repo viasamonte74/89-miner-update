@@ -696,12 +696,22 @@ def _bars_age_h(pair: str = "BTCUSD") -> float | None:
 
 
 def _refresh_bars(pairs: list[str]) -> None:
-    """Rebuild 1m bars from the growing tick archive (can take a bit)."""
+    """Rebuild 1m bars; flock so fleet LF/HF processes do not thrash together."""
+    import fcntl
+
     from miner_ext.backtest.bars import build_bars
 
+    data_root = os.environ.get("SN89_DATA_ROOT", "/workspace/sn89_data")
+    lock_path = Path(data_root) / "bars_refresh.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     _log({"event": "bars_refresh_start", "n_pairs": len(pairs)})
-    build_bars(pairs=pairs)
+    with lock_path.open("a+", encoding="utf-8") as lf:
+        fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+        try:
+            build_bars(pairs=pairs)
+        finally:
+            fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
     _log(
         {
             "event": "bars_refresh_done",

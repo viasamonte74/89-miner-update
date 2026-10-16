@@ -46,6 +46,7 @@ if _SCRIPTS not in sys.path:
     sys.path.insert(0, _SCRIPTS)
 import fleet_hf_diversity  # noqa: E402
 import fleet_priors  # noqa: E402
+import hf_live_quotes  # noqa: E402
 
 _STATE_DIR = Path(os.environ.get("SN89_STATE_DIR", os.path.expanduser("~/.sn89")))
 LOG = Path(os.environ.get("SN89_HF_AUTO_LOG", "/workspace/logs/hf_auto_submit.jsonl"))
@@ -65,9 +66,9 @@ LF_CLAIM_DIR = Path(
 
 # Eligibility needs ~50 / 8 trading days ≈ 6.3/day. Cap below protocol 30 and
 # space submits so we only fire when a high-quality setup is open.
-MAX_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_DAY", "8"))
+MAX_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_DAY", "10"))
 # Cap concentration on one pair per UTC day (SUI dominated prior book).
-MAX_PER_PAIR_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_PAIR_PER_DAY", "2"))
+MAX_PER_PAIR_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_PAIR_PER_DAY", "3"))
 MIN_GAP_S = float(os.environ.get("SN89_HF_MIN_GAP_S", "3600"))  # 1h between fires
 POLL_S = float(os.environ.get("SN89_HF_POLL_S", "45"))
 MIN_VOL_BAND = float(os.environ.get("SN89_HF_MIN_VOL_BAND", "1.30"))
@@ -133,6 +134,7 @@ DIVERSITY_GUARD = os.environ.get("SN89_HF_DIVERSITY_GUARD", "1").strip() not in 
 )
 DIVERSITY_MARGIN = float(os.environ.get("SN89_HF_DIVERSITY_MARGIN", "0.05"))
 DIVERSITY_GUARD_MIN_N = int(os.environ.get("SN89_HF_DIVERSITY_GUARD_MIN_N", "30"))
+DIVERSITY_GUARD_MODE = os.environ.get("SN89_HF_DIVERSITY_GUARD_MODE", "improve")
 MINORITY_EDGE_TOL = float(os.environ.get("SN89_HF_MINORITY_EDGE_TOL", "0.02"))
 ALLOW_MINORITY_EDGE = os.environ.get("SN89_HF_ALLOW_MINORITY_EDGE", "1").strip() not in (
     "0",
@@ -143,37 +145,30 @@ DIVERSITY_PREFER_SHORT_HZ = os.environ.get(
     "SN89_HF_DIVERSITY_PREFER_SHORT_HZ", "1"
 ).strip() not in ("0", "false", "False")
 REJECT_COOLDOWN_S = float(os.environ.get("SN89_HF_REJECT_COOLDOWN_S", "900"))
+# Pair-lock rejects should not hammer every 15m — use longer cooldown.
+REJECT_PAIR_LOCK_COOLDOWN_S = float(
+    os.environ.get("SN89_HF_REJECT_PAIR_LOCK_COOLDOWN_S", str(3600))
+)
+# HF has no copy-mark; default OFF so sibling opposite can repair diversity.
 BLOCK_SIBLING_OPPOSITE = os.environ.get(
-    "SN89_HF_BLOCK_SIBLING_OPPOSITE", "1"
+    "SN89_HF_BLOCK_SIBLING_OPPOSITE", "0"
 ).strip() not in ("0", "false", "False")
-
-# Crypto HF pairs we have 1m bars for (skip equities/FX without archive).
-# Ordered toward low-wash / top-miner LF cores (still scored; HF board gates apply).
+# Drop long-horizon HF board pairs (2h raises diversity floor; fleet HR ~43%).
+MAX_HORIZON_S = int(os.environ.get("SN89_HF_MAX_HORIZON_S", "1800"))
+LIVE_QUOTES = os.environ.get("SN89_HF_LIVE_QUOTES", "1").strip() not in (
+    "0",
+    "false",
+    "False",
+)
+# Optional UTC hour window "start-end" (end exclusive). Empty = all day.
+_SESSION_RAW = os.environ.get("SN89_HF_SESSION_UTC", "").strip()
+# Specialize: few pairs, both directions (candidates from fleet graded book).
 DEFAULT_PAIRS = [
-    "ZROUSD",
-    "TAOUSD",
-    "ALGOUSD",
-    "NEARUSD",
-    "SUIUSD",
-    "LTCUSD",
-    "BCHUSD",
-    "UNIUSD",
-    "AVAXUSD",
-    "WLDUSD",
-    "ENAUSD",
-    "ADAUSD",
-    "LINKUSD",
-    "DOTUSD",
-    "KPEPEUSD",
-    "XRPUSD",
-    "BNBUSD",
-    "SOLUSD",
-    "HYPEUSD",
-    "DOGEUSD",
-    "ARBUSD",
-    "CRVUSD",
-    "ETHUSD",
-    "BTCUSD",
+    x.strip().upper()
+    for x in os.environ.get(
+        "SN89_HF_AUTO_PAIRS", "SUIUSD,ALGOUSD,ADAUSD,KPEPEUSD,NEARUSD"
+    ).split(",")
+    if x.strip()
 ]
 
 
@@ -341,8 +336,12 @@ def _dir_counts_from_log(path: Path, now: float, window_s: float) -> dict[str, l
     return by_pair
 
 
-def _prefer_minority_side(ranked: list[dict], now: float) -> list[dict]:
-    """Stable-sort so under-represented side per pair comes first (diversity gate)."""
+def _prefer_minority_side(
+    ranked: list[dict], now: float, *, only_when_below: bool
+) -> list[dict]:
+    """When below diversity target, prefer true minority sides; else keep score order."""
+    if not only_when_below:
+        return ranked
     window = float(getattr(hf_mod, "HF_DIVERSITY_WINDOW_S", 30 * 86400))
     counts = _dir_counts_from_log(LOG, now, window)
     if not counts:
@@ -352,12 +351,14 @@ def _prefer_minority_side(ranked: list[dict], now: float) -> list[dict]:
         pair = r["pair"]
         d = r["direction"]
         longs, shorts = counts.get(pair, [0, 0])
-        # Prefer the side that increases min(L,S) for this pair.
         if d == "LONG":
             minority_gain = 1 if longs < shorts else (0 if longs == shorts else -1)
         else:
             minority_gain = 1 if shorts < longs else (0 if longs == shorts else -1)
-        return (-minority_gain, -float(r.get("score") or 0))
+        # Minority first only as a soft tie-break among positive-edge rows;
+        # minority_relief rows sort after real-edge minority, never before strong majors.
+        relief = 1 if r.get("minority_relief") else 0
+        return (-minority_gain, relief, -float(r.get("score") or 0))
 
     return sorted(ranked, key=key)
 
@@ -477,13 +478,17 @@ def _reject_cooldown_active(pair: str, now: float) -> float | None:
 def _set_reject_cooldown(pair: str, now: float, reason: str | None) -> None:
     st = _load_state()
     cool = dict(st.get("reject_cooldown") or {})
-    cool[pair.upper()] = now + REJECT_COOLDOWN_S
+    reason_s = str(reason or "").lower()
+    cd = REJECT_COOLDOWN_S
+    if "pair_lock" in reason_s or "locked" in reason_s or "cross" in reason_s:
+        cd = REJECT_PAIR_LOCK_COOLDOWN_S
+    cool[pair.upper()] = now + cd
     st["reject_cooldown"] = cool
     st["last_reject"] = {
         "pair": pair.upper(),
         "ts": now,
         "reason": reason,
-        "cooldown_s": REJECT_COOLDOWN_S,
+        "cooldown_s": cd,
     }
     _save_state(st)
 
@@ -565,6 +570,7 @@ def _passes_quality(
 
 
 def _submits_today(now: float) -> list[float]:
+    """Accepted submits only — ambiguous must not burn the daily cap."""
     if not LOG.exists():
         return []
     day = _day_id(now)
@@ -574,17 +580,46 @@ def _submits_today(now: float) -> list[float]:
             o = json.loads(line)
         except json.JSONDecodeError:
             continue
-        ev = o.get("event")
-        if ev == "submit_ok" and o.get("ok", True):
-            pass
-        elif ev == "submit_ambiguous":
-            pass
-        else:
+        if o.get("event") == "submit_ok" and o.get("ok", True):
+            ts = float(o.get("ts") or 0)
+            if _day_id(ts) == day:
+                out.append(ts)
+    return out
+
+
+def _last_attempt_ts(now: float) -> float | None:
+    """Latest submit_ok or submit_ambiguous today (for min-gap)."""
+    if not LOG.exists():
+        return None
+    day = _day_id(now)
+    last = None
+    for line in LOG.read_text(encoding="utf-8").splitlines():
+        try:
+            o = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if o.get("event") not in {"submit_ok", "submit_ambiguous"}:
+            continue
+        if o.get("event") == "submit_ok" and not o.get("ok", True):
             continue
         ts = float(o.get("ts") or 0)
         if _day_id(ts) == day:
-            out.append(ts)
-    return out
+            last = ts if last is None else max(last, ts)
+    return last
+
+
+def _session_ok(now: float) -> bool:
+    if not _SESSION_RAW or "-" not in _SESSION_RAW:
+        return True
+    try:
+        a, b = _SESSION_RAW.split("-", 1)
+        start_h, end_h = int(a), int(b)
+    except ValueError:
+        return True
+    hour = time.gmtime(now).tm_hour
+    if start_h <= end_h:
+        return start_h <= hour < end_h
+    return hour >= start_h or hour < end_h
 
 
 def _pair_counts_today(now: float) -> dict[str, int]:
@@ -616,6 +651,9 @@ def score_hf(
     tp_bps: float,
     horizon_s: int,
     cache: dict,
+    *,
+    subs: list[tuple] | None = None,
+    live_quote: dict | None = None,
 ) -> dict | None:
     if fleet_priors.hf_pair_dir_blocked(pair, direction):
         return None
@@ -625,7 +663,12 @@ def score_hf(
             return None
         cache[pair] = series
     t_ms, close = cache[pair]
-    decision_ms = int(now * 1000)
+    if live_quote:
+        t_ms, close = hf_live_quotes.append_live_to_series(t_ms, close, live_quote)
+        cache[pair] = (t_ms, close)
+        decision_ms = int(live_quote["t_ms"])
+    else:
+        decision_ms = int(now * 1000)
     lookback = max(60, min(720, int(horizon_s // 60) * 4))
     stats = realized_stats(t_ms, close, decision_ms, lookback_min=lookback)
     stats_short = realized_stats(
@@ -651,18 +694,22 @@ def score_hf(
     else:
         edge = float(0.5 - fp)
         mom_term = max(0.0, -float(mom) * 100.0)
+    minority = False
+    if subs is not None:
+        minority = fleet_hf_diversity.is_minority_side(subs, pair, direction, now)
     minority_relief = False
     if edge < MIN_EDGE:
         if not (
             ALLOW_MINORITY_EDGE
             and fleet_hf_diversity.minority_edge_ok(
-                edge, min_edge=MIN_EDGE, tol=MINORITY_EDGE_TOL
+                edge,
+                min_edge=MIN_EDGE,
+                tol=MINORITY_EDGE_TOL,
+                is_minority=minority,
             )
         ):
             return None
-        # Negative / sub-MIN_EDGE side kept only for diversity repair.
-        if edge < MIN_EDGE:
-            minority_relief = True
+        minority_relief = True
     decisive_w = max(0.15, min(1.6, vol_band / 1.0))
     recent_w = max(0.15, min(1.6, vol_band_short / 0.7))
     hz_bonus = 1.08 if horizon_s <= PREFER_HZ_S else 1.0
@@ -684,10 +731,19 @@ def score_hf(
         "horizon_s": int(horizon_s),
         "mom": float(mom),
         "minority_relief": bool(minority_relief),
+        "is_minority": bool(minority),
+        "live_quote": bool(live_quote),
     }
 
 
-def rank_hf(pairs: list[str], now: float, cache: dict) -> list[dict]:
+def rank_hf(
+    pairs: list[str],
+    now: float,
+    cache: dict,
+    *,
+    wallet=None,
+    subs: list[tuple] | None = None,
+) -> list[dict]:
     board = hf_mod.hf_bands_as_of(now) or {}
     out = []
     for pair in pairs:
@@ -695,8 +751,22 @@ def rank_hf(pairs: list[str], now: float, cache: dict) -> list[dict]:
         if not row:
             continue
         tp, _sl, horizon_s, _cls = row
+        if MAX_HORIZON_S > 0 and int(horizon_s) > MAX_HORIZON_S:
+            continue
+        live = None
+        if LIVE_QUOTES and wallet is not None:
+            live = hf_live_quotes.fetch_live_price(pair, wallet=wallet)
         for d in ("LONG", "SHORT"):
-            r = score_hf(pair, d, now, float(tp), int(horizon_s), cache)
+            r = score_hf(
+                pair,
+                d,
+                now,
+                float(tp),
+                int(horizon_s),
+                cache,
+                subs=subs,
+                live_quote=live,
+            )
             if r is not None:
                 out.append(r)
     out.sort(key=lambda r: -r["score"])
@@ -738,17 +808,21 @@ def run(
             "strict_pair_dirs": sorted(f"{p}:{d}" for p, d in STRICT_PAIR_DIRS),
             "pair_lock_s": PAIR_LOCK_S,
             "diversity_guard": DIVERSITY_GUARD,
+            "diversity_guard_mode": DIVERSITY_GUARD_MODE,
             "diversity_margin": DIVERSITY_MARGIN,
             "diversity_guard_min_n": DIVERSITY_GUARD_MIN_N,
             "minority_edge_tol": MINORITY_EDGE_TOL,
             "allow_minority_edge": ALLOW_MINORITY_EDGE,
             "reject_cooldown_s": REJECT_COOLDOWN_S,
             "block_sibling_opposite": BLOCK_SIBLING_OPPOSITE,
+            "max_horizon_s": MAX_HORIZON_S,
+            "live_quotes": LIVE_QUOTES,
+            "session_utc": _SESSION_RAW or "all",
             "sibling_logs": [str(p) for p in _sibling_hf_logs()],
             "lf_log": str(LF_LOG),
             "fleet_priors": fleet_priors.load_stats_note(),
             "hf_deny": sorted(f"{p}:{d}" for p, d in fleet_priors.HF_PAIR_DIR_DENY),
-            "bars_age_min": round(_bars_age_min() or -1, 1),
+            "bars_age_min": round(_bars_age_min(pairs[0]) or -1, 1) if pairs else -1,
         }
     )
 
@@ -758,29 +832,33 @@ def run(
             return
 
         now = time.time()
+        if not _session_ok(now):
+            # Sleep until next allowed UTC hour.
+            hour = time.gmtime(now).tm_hour
+            _sleep(min(poll_s * 4, 900), f"hf_session_blocked hour={hour}")
+            continue
         today = _submits_today(now)
         if len(today) >= MAX_PER_DAY:
-            # sleep until next UTC day
             to_day = (_day_id(now) + 1) * 86_400 - now + 30
             _sleep(to_day, "hf_daily_cap")
             continue
-        if today and (now - max(today)) < MIN_GAP_S:
-            _sleep(MIN_GAP_S - (now - max(today)) + 1, "hf_min_gap")
+        last_att = _last_attempt_ts(now)
+        if last_att is not None and (now - last_att) < MIN_GAP_S:
+            _sleep(MIN_GAP_S - (now - last_att) + 1, "hf_min_gap")
             continue
 
-        def _any_bars_age() -> float | None:
-            for p in pairs:
-                a = _bars_age_min(p)
-                if a is not None:
-                    return a
-            return None
-
-        age = _any_bars_age()
-        if now - last_bar_refresh >= BAR_REFRESH_S or (age is not None and age > BAR_MAX_AGE_MIN):
+        ages = [a for a in (_bars_age_min(p) for p in pairs) if a is not None]
+        age = (sorted(ages)[len(ages) // 2] if ages else None)  # median of known pairs
+        fresh_n = sum(1 for a in ages if a <= BAR_MAX_AGE_MIN * 3)
+        if now - last_bar_refresh >= BAR_REFRESH_S or (
+            age is not None and age > BAR_MAX_AGE_MIN
+        ):
             try:
                 _refresh_bars(pairs)
                 last_bar_refresh = time.time()
-                age = _any_bars_age()
+                ages = [a for a in (_bars_age_min(p) for p in pairs) if a is not None]
+                age = sorted(ages)[len(ages) // 2] if ages else None
+                fresh_n = sum(1 for a in ages if a <= BAR_MAX_AGE_MIN * 3)
             except Exception as e:  # noqa: BLE001
                 _log(
                     {
@@ -791,16 +869,16 @@ def run(
                 )
                 last_bar_refresh = now
             cache.clear()
-        # Fail closed: missing/unreadable bars, or badly stale after refresh.
-        if age is None or age > BAR_MAX_AGE_MIN * 3:
+        # Need a majority of specialized pairs fresh — not one quiet lead pair.
+        if not ages or fresh_n < max(1, (len(pairs) + 1) // 2):
             _sleep(
                 poll_s,
-                f"bars_stale_or_missing age_min={round(age, 1) if age is not None else None}",
+                f"bars_stale_or_missing median={round(age, 1) if age is not None else None} "
+                f"fresh={fresh_n}/{len(pairs)}",
             )
             continue
 
         lf_locked = _lf_locked_pairs_for_hotkey(now)
-        # Own open HF only (horizon). 24h lock is LF↔HF via lf_locked, not HF→HF.
         own_open = _own_open_pairs(now)
         sibling = _hf_sibling_live(now)
         blocked_pd = set(sibling)
@@ -808,8 +886,18 @@ def run(
             blocked_pd.add((p, "LONG"))
             blocked_pd.add((p, "SHORT"))
 
+        subs = fleet_hf_diversity.load_diversity_subs(
+            hk, log_path=LOG, state_dir=_STATE_DIR
+        )
+        cur_div = hf_mod.hf_diversity(subs, now)
+        below_target = False
+        if DIVERSITY_GUARD and int(cur_div.get("n") or 0) >= DIVERSITY_GUARD_MIN_N:
+            below_target = float(cur_div.get("share") or 0) < (
+                float(cur_div.get("floor") or 0) + DIVERSITY_MARGIN
+            )
+
         cache.clear()
-        ranked = rank_hf(pairs, now, cache)
+        ranked = rank_hf(pairs, now, cache, wallet=w, subs=subs)
         board_best = float(ranked[0]["score"]) if ranked else 0.0
         pair_counts = _pair_counts_today(now)
         quality = [
@@ -826,30 +914,19 @@ def run(
                 r, board_best=board_best, now=now, pick_rank=pick_rank
             )
         ]
-        # Free-best (default): claims + sibling locks already anti-copy; do not
-        # hard-slice by pick_rank (that left h3/h4 at 0 when n_quality≈1).
-        # Legacy slice kept only if SN89_HF_FREE_BEST=0.
         if FREE_BEST or pick_rank <= 0:
             free = quality
         else:
             preferred = quality[pick_rank:]
             free = preferred if preferred else quality
-        free = _prefer_minority_side(free, now)
-
-        subs = fleet_hf_diversity.load_diversity_subs(
-            hk, log_path=LOG, state_dir=_STATE_DIR
-        )
-        cur_div = hf_mod.hf_diversity(subs, now)
-        below_target = False
-        if DIVERSITY_GUARD and int(cur_div.get("n") or 0) >= DIVERSITY_GUARD_MIN_N:
-            below_target = float(cur_div.get("share") or 0) < (
-                float(cur_div.get("floor") or 0) + DIVERSITY_MARGIN
-            )
+        free = _prefer_minority_side(free, now, only_when_below=below_target)
         if below_target and DIVERSITY_PREFER_SHORT_HZ:
             free = sorted(
                 free,
                 key=lambda r: (
                     0 if int(r.get("horizon_s") or 0) <= PREFER_HZ_S else 1,
+                    0 if r.get("is_minority") else 1,
+                    1 if r.get("minority_relief") else 0,
                     -float(r.get("score") or 0),
                 ),
             )
@@ -873,17 +950,20 @@ def run(
                 continue
             pair_age = _bars_age_min(r["pair"])
             if pair_age is None or pair_age > BAR_MAX_AGE_MIN * 3:
-                _log(
-                    {
-                        "event": "skip_pair_bars_stale",
-                        "pair": r["pair"],
-                        "bars_age_min": None if pair_age is None else round(pair_age, 1),
-                        "diversity_share": cur_div.get("share"),
-                        "diversity_floor": cur_div.get("floor"),
-                        "n": cur_div.get("n"),
-                    }
-                )
-                continue
+                if not (LIVE_QUOTES and r.get("live_quote")):
+                    _log(
+                        {
+                            "event": "skip_pair_bars_stale",
+                            "pair": r["pair"],
+                            "bars_age_min": None
+                            if pair_age is None
+                            else round(pair_age, 1),
+                            "diversity_share": cur_div.get("share"),
+                            "diversity_floor": cur_div.get("floor"),
+                            "n": cur_div.get("n"),
+                        }
+                    )
+                    continue
             allow, _cur, proj = fleet_hf_diversity.diversity_guard_allows(
                 subs,
                 r,
@@ -891,6 +971,7 @@ def run(
                 margin=DIVERSITY_MARGIN,
                 guard_min_n=DIVERSITY_GUARD_MIN_N,
                 enabled=DIVERSITY_GUARD,
+                mode=DIVERSITY_GUARD_MODE,
             )
             if not allow:
                 diversity_blocked += 1
@@ -902,10 +983,11 @@ def run(
                         "horizon_s": r.get("horizon_s"),
                         "edge": r.get("edge"),
                         "minority_relief": bool(r.get("minority_relief")),
+                        "is_minority": bool(r.get("is_minority")),
+                        "guard_mode": DIVERSITY_GUARD_MODE,
                         "diversity_share": proj.get("share"),
+                        "diversity_share_prev": cur_div.get("share"),
                         "diversity_floor": proj.get("floor"),
-                        "diversity_target": float(proj.get("floor") or 0)
-                        + DIVERSITY_MARGIN,
                         "n": proj.get("n"),
                     }
                 )
@@ -938,7 +1020,7 @@ def run(
                 poll_s,
                 (
                     f"wait_quality n_ranked={len(ranked)} n_quality={len(quality)} "
-                    f"div_blocked={diversity_blocked} "
+                    f"div_blocked={diversity_blocked} mode={DIVERSITY_GUARD_MODE} "
                     f"share={cur_div.get('share')} floor={cur_div.get('floor')} "
                     f"n={cur_div.get('n')} "
                     f"board_best={board_best:.3f} "
@@ -1010,6 +1092,11 @@ def run(
                     "vol_band": target["vol_band"],
                     "receipt_kind": kind,
                     "seq": resp.get("seq"),
+                    "live_quote": bool(target.get("live_quote")),
+                    "is_minority": bool(target.get("is_minority")),
+                    "diversity_share": proj.get("share", cur_div.get("share")),
+                    "diversity_floor": proj.get("floor", cur_div.get("floor")),
+                    "n": proj.get("n", cur_div.get("n")),
                 }
             )
             st = _load_state()

@@ -10,14 +10,40 @@ from sn89_signals import hf as hf_mod
 
 STATE_DIR = Path(os.environ.get("SN89_STATE_DIR", os.path.expanduser("~/.sn89")))
 
+# improve = allow if projected share >= current (repair path to floor)
+# target = legacy one-step clear of floor+margin (too strict for deep holes)
+GUARD_MODE = os.environ.get("SN89_HF_DIVERSITY_GUARD_MODE", "improve").strip().lower()
+
 
 def receipts_path(hotkey: str, state_dir: Path | None = None) -> Path:
     root = state_dir or STATE_DIR
     return root / f"hf_receipts_{hotkey}.jsonl"
 
 
+def _row_from_payload(
+    pay: dict, t0: int, *, seq: int | None = None
+) -> tuple | None:
+    pair = str(pay.get("trade_pair") or pay.get("pair") or "").upper()
+    direction = str(pay.get("direction") or "").upper()
+    if not pair or direction not in {"LONG", "SHORT"}:
+        return None
+    hz = pay.get("horizon_s")
+    try:
+        hz_f = float(hz) if hz is not None else None
+    except (TypeError, ValueError):
+        hz_f = None
+    # (t0_ms, pair, direction[, horizon_s[, seq]])
+    if hz_f and seq is not None:
+        return (int(t0), pair, direction, hz_f, int(seq))
+    if hz_f:
+        return (int(t0), pair, direction, hz_f)
+    if seq is not None:
+        return (int(t0), pair, direction, 0.0, int(seq))
+    return (int(t0), pair, direction)
+
+
 def load_subs_from_receipts(path: Path) -> list[tuple]:
-    """Return `(t0_ms, pair, direction, horizon_s)` from local ingest receipts."""
+    """Return diversity rows from local ingest receipts (preferred source)."""
     out: list[tuple] = []
     if not path.exists():
         return out
@@ -40,29 +66,26 @@ def load_subs_from_receipts(path: Path) -> list[tuple]:
                 continue
         if not isinstance(pay, dict):
             continue
-        pair = str(pay.get("trade_pair") or pay.get("pair") or "").upper()
-        direction = str(pay.get("direction") or "").upper()
-        if not pair or direction not in {"LONG", "SHORT"}:
-            continue
         t0 = rec.get("grid_t0_ms")
         if t0 is None:
             t0 = sub.get("ts_miner")
         if t0 is None:
             continue
-        hz = pay.get("horizon_s")
+        seq = sub.get("seq")
+        if seq is None:
+            seq = rec.get("seq")
         try:
-            hz_f = float(hz) if hz is not None else None
+            seq_i = int(seq) if seq is not None else None
         except (TypeError, ValueError):
-            hz_f = None
-        row: tuple = (int(t0), pair, direction)
-        if hz_f:
-            row = (int(t0), pair, direction, hz_f)
-        out.append(row)
+            seq_i = None
+        row = _row_from_payload(pay, int(t0), seq=seq_i)
+        if row:
+            out.append(row)
     return out
 
 
 def load_subs_from_submit_log(path: Path) -> list[tuple]:
-    """Fallback: `submit_ok` lines from hf_auto_loop JSONL."""
+    """`submit_ok` lines from hf_auto_loop JSONL (fallback / gap fill)."""
     out: list[tuple] = []
     if not path.exists():
         return out
@@ -84,18 +107,31 @@ def load_subs_from_submit_log(path: Path) -> list[tuple]:
         ts = o.get("ts")
         if ts is None:
             continue
-        # log ts is unix seconds; diversity wants ms
         t0_ms = int(float(ts) * 1000.0)
         hz = o.get("horizon_s")
         try:
             hz_f = float(hz) if hz is not None else None
         except (TypeError, ValueError):
             hz_f = None
-        row: tuple = (t0_ms, pair, direction)
-        if hz_f:
-            row = (t0_ms, pair, direction, hz_f)
-        out.append(row)
+        seq = o.get("seq")
+        try:
+            seq_i = int(seq) if seq is not None else None
+        except (TypeError, ValueError):
+            seq_i = None
+        pay = {"trade_pair": pair, "direction": direction, "horizon_s": hz_f}
+        row = _row_from_payload(pay, t0_ms, seq=seq_i)
+        if row:
+            out.append(row)
     return out
+
+
+def _dedupe_key(row: tuple) -> tuple:
+    """Prefer seq when present; else (pair, direction, t0_ms)."""
+    t0, pair, direction = row[0], row[1], row[2]
+    seq = row[4] if len(row) > 4 else None
+    if seq is not None and int(seq) > 0:
+        return ("seq", int(seq))
+    return ("t0", int(t0), str(pair), str(direction))
 
 
 def load_diversity_subs(
@@ -104,15 +140,27 @@ def load_diversity_subs(
     log_path: Path | None = None,
     state_dir: Path | None = None,
 ) -> list[tuple]:
-    """Prefer receipts; merge submit_ok log for any gaps (by t0_ms+pair+dir)."""
+    """Prefer receipts; merge log gaps. De-dupe on seq (not mismatched clocks)."""
     rec = load_subs_from_receipts(receipts_path(hotkey, state_dir))
-    seen = {(r[0], r[1], r[2]) for r in rec}
+    seen = {_dedupe_key(r) for r in rec}
+    # Also remember seq-less receipt (pair,dir) near receipt times poorly —
+    # seq is the reliable key when both sources have it.
     if log_path is not None:
         for r in load_subs_from_submit_log(log_path):
-            key = (r[0], r[1], r[2])
-            if key not in seen:
-                rec.append(r)
-                seen.add(key)
+            key = _dedupe_key(r)
+            if key in seen:
+                continue
+            # If log has no seq, skip when receipts already cover this pair/dir
+            # with any seq (avoid double-count from clock skew).
+            if key[0] == "t0":
+                pair, direction = r[1], r[2]
+                if any(
+                    x[1] == pair and x[2] == direction and len(x) > 4
+                    for x in rec
+                ):
+                    continue
+            rec.append(r)
+            seen.add(key)
     return rec
 
 
@@ -133,6 +181,21 @@ def project_diversity(
     return hf_mod.hf_diversity(merged, now)
 
 
+def is_minority_side(subs: list[tuple], pair: str, direction: str, now: float) -> bool:
+    """True if direction is strictly under-represented on this pair in-window."""
+    d = hf_mod.hf_diversity(subs, now)
+    by = d.get("by_pair") or {}
+    longs, shorts = by.get(str(pair).upper(), (0, 0))
+    if isinstance(longs, (list, tuple)):
+        longs, shorts = int(longs[0]), int(longs[1]) if len(longs) > 1 else 0
+    direction = direction.upper()
+    if direction == "LONG":
+        return int(longs) < int(shorts)
+    if direction == "SHORT":
+        return int(shorts) < int(longs)
+    return False
+
+
 def diversity_guard_allows(
     subs: list[tuple],
     candidate: dict[str, Any],
@@ -141,12 +204,14 @@ def diversity_guard_allows(
     margin: float,
     guard_min_n: int,
     enabled: bool = True,
+    mode: str | None = None,
 ) -> tuple[bool, dict, dict]:
     """Return (allow, current_div, projected_div).
 
-    Once projected n ≥ guard_min_n, require projected share ≥ floor + margin.
-    When the official gate does not yet apply (n < HF_DIVERSITY_MIN_SUBS), we
-    still enforce the margin buffer so we do not walk into a failing book.
+    Modes (SN89_HF_DIVERSITY_GUARD_MODE):
+      improve — allow if projected share >= current share (default). Optional
+                hard reject only if share falls AND projected n >= gate min.
+      target  — legacy: require share >= floor + margin in one step.
     """
     current = hf_mod.hf_diversity(subs, now)
     projected = project_diversity(subs, candidate, now)
@@ -155,14 +220,33 @@ def diversity_guard_allows(
     n = int(projected.get("n") or 0)
     if n < int(guard_min_n):
         return True, current, projected
+
+    mode = (mode or GUARD_MODE or "improve").strip().lower()
+    cur_share = float(current.get("share") or 0.0)
+    proj_share = float(projected.get("share") or 0.0)
     floor = float(projected.get("floor") or 0.0)
-    share = float(projected.get("share") or 0.0)
     target = floor + float(margin)
-    return share + 1e-12 >= target, current, projected
+
+    if mode == "target":
+        return proj_share + 1e-12 >= target, current, projected
+
+    # improve (default): never worsen two-sidedness once guard is active.
+    # Still prefer reaching target, but do not require it in one call.
+    if proj_share + 1e-12 >= cur_share:
+        return True, current, projected
+    return False, current, projected
 
 
-def minority_edge_ok(edge: float, *, min_edge: float, tol: float) -> bool:
-    """Trend side needs edge ≥ min_edge; minority relief allows down to -tol."""
+def minority_edge_ok(
+    edge: float,
+    *,
+    min_edge: float,
+    tol: float,
+    is_minority: bool,
+) -> bool:
+    """Full min_edge for majority/normal; minority side may use -tol."""
     if edge >= float(min_edge):
         return True
-    return edge >= -float(tol)
+    if is_minority and edge >= -float(tol):
+        return True
+    return False
