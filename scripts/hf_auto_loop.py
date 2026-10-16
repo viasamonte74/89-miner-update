@@ -505,19 +505,34 @@ def _set_reject_cooldown(pair: str, now: float, reason: str | None) -> None:
     _save_state(st)
 
 
-def _refresh_bars(pairs: list[str]) -> None:
-    """Rebuild 1m bars; flock so only one HF/LF process rebuilds at a time."""
+def _refresh_bars(pairs: list[str]) -> bool:
+    """Rebuild 1m bars; non-blocking flock so LF's long rebuild cannot stall HF.
+
+    Returns True if this process ran a refresh or confirmed bars are fresh enough.
+    Returns False if another process holds the lock (caller should score on
+    existing parquet + live quotes when under the hard age ceiling).
+    """
     from miner_ext.backtest.bars import build_bars
 
     lock_path = Path("/workspace/sn89_data/bars_refresh.lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+", encoding="utf-8") as lf:
-        fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+        try:
+            fcntl.flock(lf.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            _log(
+                {
+                    "event": "bars_refresh_busy",
+                    "n_pairs": len(pairs),
+                    "age_min": round(_bars_age_min() or -1, 1),
+                }
+            )
+            return False
         try:
             age = _bars_age_min()
             if age is not None and age < BAR_MAX_AGE_MIN:
                 _log({"event": "bars_fresh_skip", "age_min": round(age, 1)})
-                return
+                return True
             t0 = time.time()
             _log({"event": "bars_refresh_start", "n_pairs": len(pairs), "age_min": age})
             build_bars(pairs=pairs)
@@ -528,6 +543,7 @@ def _refresh_bars(pairs: list[str]) -> None:
                     "age_min": round(_bars_age_min() or -1, 1),
                 }
             )
+            return True
         finally:
             fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
 
@@ -986,8 +1002,13 @@ def run(
             age is not None and age > BAR_MAX_AGE_MIN and now - last_bar_refresh >= 60.0
         ):
             try:
-                _refresh_bars(pairs)
-                last_bar_refresh = time.time()
+                did = _refresh_bars(pairs)
+                # Only advance the refresh timer on success; if lock busy, retry soon
+                # but still fall through to score when under hard age + live quotes.
+                if did:
+                    last_bar_refresh = time.time()
+                else:
+                    last_bar_refresh = now - BAR_REFRESH_S + min(30.0, poll_s)
                 ages = [a for a in (_bars_age_min(p) for p in pairs) if a is not None]
                 age = sorted(ages)[len(ages) // 2] if ages else None
                 fresh_n = sum(1 for a in ages if a <= BAR_MAX_AGE_MIN)
