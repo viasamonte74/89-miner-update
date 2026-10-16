@@ -87,8 +87,15 @@ FREE_BEST = os.environ.get("SN89_HF_FREE_BEST", "1").strip() not in (
     "false",
     "False",
 )
-# Strict qualify mode: only allow proven pair×dirs + higher score floor.
+# Strict qualify mode: proven pairs + higher score floor.
 STRICT_MODE = os.environ.get("SN89_STRICT_MODE", "0").strip() not in (
+    "0",
+    "false",
+    "False",
+)
+# Default ON: allow both dirs on each strict pair. One-dir-only books fail the
+# per-pair two-sidedness gate (hf.hf_diversity) once n≥HF_DIVERSITY_MIN_SUBS.
+STRICT_BOTH_DIRS = os.environ.get("SN89_STRICT_BOTH_DIRS", "1").strip() not in (
     "0",
     "false",
     "False",
@@ -98,12 +105,22 @@ _STRICT_PD_RAW = os.environ.get(
     "ADAUSD:SHORT,SUIUSD:SHORT,ALGOUSD:SHORT,XRPUSD:SHORT,NEARUSD:SHORT,"
     "KPEPEUSD:LONG,WLDUSD:LONG,BCHUSD:LONG,LINKUSD:LONG",
 )
-STRICT_PAIR_DIRS = frozenset(
+_STRICT_PD_BASE = frozenset(
     tuple(x.strip().upper().split(":", 1))
     for x in _STRICT_PD_RAW.split(",")
     if ":" in x.strip()
 )
+if STRICT_BOTH_DIRS:
+    STRICT_PAIR_DIRS = frozenset(
+        (p, d)
+        for p, _ in _STRICT_PD_BASE
+        for d in ("LONG", "SHORT")
+    ) | _STRICT_PD_BASE
+else:
+    STRICT_PAIR_DIRS = _STRICT_PD_BASE
 STRICT_MIN_SCORE = float(os.environ.get("SN89_STRICT_MIN_SCORE", "1.25"))
+# Validator pair lock (24h) — must not treat horizon (often 30m–8h) as unlock.
+PAIR_LOCK_S = float(os.environ.get("SN89_PAIR_LOCK_S", str(hf_mod.PAIR_LOCK_S)))
 # Prefer faster 30m horizons when scoring equal
 PREFER_HZ_S = int(os.environ.get("SN89_HF_PREFER_HZ_S", "1800"))
 BAR_REFRESH_S = float(os.environ.get("SN89_HF_BAR_REFRESH_S", "300"))
@@ -195,8 +212,18 @@ def _sibling_hf_logs() -> list[Path]:
     return out
 
 
-def _live_pairs_from_log(path: Path, now: float, *, by_pair_only: bool) -> set:
-    """Pairs (or pair,dir) still within horizon from submit_ok lines."""
+def _live_pairs_from_log(
+    path: Path,
+    now: float,
+    *,
+    by_pair_only: bool,
+    live_s: float | None = None,
+) -> set:
+    """Pairs (or pair,dir) still within lock window from submit_ok lines.
+
+    ``live_s`` overrides horizon. When omitted, uses max(horizon, PAIR_LOCK_S)
+    so an 8h default horizon cannot unlock a pair before the 24h validator lock.
+    """
     live: set = set()
     if not path.exists():
         return live
@@ -209,11 +236,19 @@ def _live_pairs_from_log(path: Path, now: float, *, by_pair_only: bool) -> set:
             o = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if o.get("event") != "submit_ok" or not o.get("ok", True):
+        # Count confirmed ok and ambiguous attempts (commit may have landed).
+        ev = o.get("event")
+        if ev not in {"submit_ok", "submit_ambiguous"}:
+            continue
+        if ev == "submit_ok" and not o.get("ok", True):
             continue
         ts = float(o.get("ts") or 0)
-        hz = float(o.get("horizon_s") or 8 * 3600)
-        if now - ts > hz:
+        if live_s is not None:
+            hold = float(live_s)
+        else:
+            hz = float(o.get("horizon_s") or 8 * 3600)
+            hold = max(hz, PAIR_LOCK_S)
+        if now - ts > hold:
             continue
         pair = (o.get("pair") or "").upper()
         direction = (o.get("direction") or "").upper()
@@ -227,11 +262,12 @@ def _live_pairs_from_log(path: Path, now: float, *, by_pair_only: bool) -> set:
 
 
 def _lf_locked_pairs_for_hotkey(now: float) -> set[str]:
-    """Pairs this hotkey must not HF (cross-mechanism lock is per-hotkey).
+    """Pairs this hotkey must not HF (24h cross-mechanism lock + open LF).
 
     Only this process's LF submit log counts — sibling LF positions do not lock us.
     """
-    locked = _live_pairs_from_log(LF_LOG, now, by_pair_only=True)
+    locked = _live_pairs_from_log(LF_LOG, now, by_pair_only=True, live_s=PAIR_LOCK_S)
+    locked |= _live_pairs_from_log(LF_LOG, now, by_pair_only=True)
     if LF_CLAIM_DIR.exists():
         try:
             our_lf = str(LF_LOG.resolve())
@@ -248,6 +284,62 @@ def _lf_locked_pairs_for_hotkey(now: float) -> set[str]:
             if log_s and (log_s == our_lf or log_s == str(LF_LOG)):
                 locked.add(str(o.get("pair") or "").upper())
     return {p for p in locked if p}
+
+
+def _own_locked_pairs(now: float) -> set[str]:
+    """Own HF pairs still under validator pair lock or open horizon."""
+    locked = _live_pairs_from_log(LOG, now, by_pair_only=True, live_s=PAIR_LOCK_S)
+    locked |= _live_pairs_from_log(LOG, now, by_pair_only=True)
+    return locked
+
+
+def _dir_counts_from_log(path: Path, now: float, window_s: float) -> dict[str, list[int]]:
+    """pair -> [n_long, n_short] in trailing window (for two-sided preference)."""
+    by_pair: dict[str, list[int]] = {}
+    if not path.exists():
+        return by_pair
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return by_pair
+    for line in text.splitlines():
+        try:
+            o = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if o.get("event") != "submit_ok" or not o.get("ok", True):
+            continue
+        ts = float(o.get("ts") or 0)
+        if now - ts > window_s:
+            continue
+        pair = (o.get("pair") or "").upper()
+        direction = (o.get("direction") or "").upper()
+        if not pair or direction not in {"LONG", "SHORT"}:
+            continue
+        lp = by_pair.setdefault(pair, [0, 0])
+        lp[0 if direction == "LONG" else 1] += 1
+    return by_pair
+
+
+def _prefer_minority_side(ranked: list[dict], now: float) -> list[dict]:
+    """Stable-sort so under-represented side per pair comes first (diversity gate)."""
+    window = float(getattr(hf_mod, "HF_DIVERSITY_WINDOW_S", 30 * 86400))
+    counts = _dir_counts_from_log(LOG, now, window)
+    if not counts:
+        return ranked
+
+    def key(r: dict) -> tuple:
+        pair = r["pair"]
+        d = r["direction"]
+        longs, shorts = counts.get(pair, [0, 0])
+        # Prefer the side that increases min(L,S) for this pair.
+        if d == "LONG":
+            minority_gain = 1 if longs < shorts else (0 if longs == shorts else -1)
+        else:
+            minority_gain = 1 if shorts < longs else (0 if longs == shorts else -1)
+        return (-minority_gain, -float(r.get("score") or 0))
+
+    return sorted(ranked, key=key)
 
 
 def _hf_sibling_live(now: float) -> set[tuple[str, str]]:
@@ -402,10 +494,16 @@ def _submits_today(now: float) -> list[float]:
             o = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if o.get("event") == "submit_ok" and o.get("ok", True):
-            ts = float(o.get("ts") or 0)
-            if _day_id(ts) == day:
-                out.append(ts)
+        ev = o.get("event")
+        if ev == "submit_ok" and o.get("ok", True):
+            pass
+        elif ev == "submit_ambiguous":
+            pass
+        else:
+            continue
+        ts = float(o.get("ts") or 0)
+        if _day_id(ts) == day:
+            out.append(ts)
     return out
 
 
@@ -542,7 +640,9 @@ def run(
             "bar_refresh_s": BAR_REFRESH_S,
             "free_best": FREE_BEST,
             "strict_mode": STRICT_MODE,
+            "strict_both_dirs": STRICT_BOTH_DIRS,
             "strict_pair_dirs": sorted(f"{p}:{d}" for p, d in STRICT_PAIR_DIRS),
+            "pair_lock_s": PAIR_LOCK_S,
             "sibling_logs": [str(p) for p in _sibling_hf_logs()],
             "lf_log": str(LF_LOG),
             "fleet_priors": fleet_priors.load_stats_note(),
@@ -572,19 +672,25 @@ def run(
             try:
                 _refresh_bars(pairs)
                 last_bar_refresh = time.time()
+                age = _bars_age_min()
             except Exception as e:  # noqa: BLE001
                 _log(
                     {
                         "event": "bars_refresh_error",
                         "error": f"{type(e).__name__}: {e}",
+                        "bars_age_min": round(age or -1, 1),
                     }
                 )
                 last_bar_refresh = now
             cache.clear()
+        # Do not score/submit on badly stale bars after a failed refresh.
+        if age is not None and age > BAR_MAX_AGE_MIN * 3:
+            _sleep(poll_s, f"bars_stale age_min={age:.1f}")
+            continue
 
         lf_locked = _lf_locked_pairs_for_hotkey(now)
-        # Own open HF pairs (one open per pair)
-        own_open = _live_pairs_from_log(LOG, now, by_pair_only=True)
+        # Own pairs under 24h pair lock or still-open horizon (not horizon-only).
+        own_open = _own_locked_pairs(now)
         sibling = _hf_sibling_live(now)
         blocked_pd = set(sibling)
         for p in lf_locked | own_open:
@@ -617,6 +723,7 @@ def run(
         else:
             preferred = quality[pick_rank:]
             free = preferred if preferred else quality
+        free = _prefer_minority_side(free, now)
 
         target = None
         for r in free:
@@ -669,41 +776,79 @@ def run(
         try:
             resp = submit_hf(w, pair, direction)
         except Exception as e:  # noqa: BLE001
+            # Ambiguous: ingest may have accepted. Hold pair lock + min gap.
             _log(
                 {
-                    "event": "submit_exception",
+                    "event": "submit_ambiguous",
+                    "ok": False,
                     "pair": pair,
+                    "direction": direction,
+                    "horizon_s": target["horizon_s"],
                     "error": f"{type(e).__name__}: {e}",
                     "trace": traceback.format_exc()[-600:],
                 }
             )
-            _sleep(max(poll_s, 60), "hf_submit_exception")
+            st = _load_state()
+            st["last_submit"] = {
+                "pair": pair,
+                "direction": direction,
+                "ts": time.time(),
+                "ok": False,
+                "ambiguous": True,
+            }
+            _save_state(st)
+            _sleep(MIN_GAP_S, "hf_submit_ambiguous_gap")
             continue
 
         ok = resp.get("kind") == "hf.receipt" and resp.get("verified", True)
-        _log(
-            {
-                "event": "submit_ok" if ok else "submit_fail",
-                "ok": bool(ok),
+        if ok:
+            _log(
+                {
+                    "event": "submit_ok",
+                    "ok": True,
+                    "pair": pair,
+                    "direction": direction,
+                    "horizon_s": target["horizon_s"],
+                    "score": target["score"],
+                    "vol_band": target["vol_band"],
+                    "receipt_kind": resp.get("kind"),
+                    "seq": resp.get("seq"),
+                }
+            )
+            st = _load_state()
+            st["last_submit"] = {
                 "pair": pair,
                 "direction": direction,
-                "horizon_s": target["horizon_s"],
-                "score": target["score"],
-                "vol_band": target["vol_band"],
-                "receipt_kind": resp.get("kind"),
-                "seq": resp.get("seq"),
-                "error": resp.get("error") or resp.get("reason"),
+                "ts": time.time(),
+                "ok": True,
             }
-        )
-        st = _load_state()
-        st["last_submit"] = {
-            "pair": pair,
-            "direction": direction,
-            "ts": now,
-            "ok": bool(ok),
-        }
-        _save_state(st)
-        _sleep(MIN_GAP_S if ok else poll_s, "post_hf_submit")
+            _save_state(st)
+            _sleep(MIN_GAP_S, "post_hf_submit")
+        else:
+            # Fail responses can still mean the call landed — treat as lock+gap.
+            _log(
+                {
+                    "event": "submit_ambiguous",
+                    "ok": False,
+                    "pair": pair,
+                    "direction": direction,
+                    "horizon_s": target["horizon_s"],
+                    "score": target["score"],
+                    "receipt_kind": resp.get("kind"),
+                    "seq": resp.get("seq"),
+                    "error": resp.get("error") or resp.get("reason"),
+                }
+            )
+            st = _load_state()
+            st["last_submit"] = {
+                "pair": pair,
+                "direction": direction,
+                "ts": time.time(),
+                "ok": False,
+                "ambiguous": True,
+            }
+            _save_state(st)
+            _sleep(MIN_GAP_S, "hf_submit_ambiguous_gap")
 
 
 def main(argv: list[str] | None = None) -> int:

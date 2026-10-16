@@ -25,6 +25,9 @@ CACHE_PATH = Path(
     )
 )
 TTL_S = float(os.environ.get("SN89_NETWORK_LIVE_TTL_S", "90"))
+# If refresh fails and cache is older than this, fail closed (block submits)
+# instead of trading blind on empty/ancient holdings.
+FAIL_CLOSED_S = float(os.environ.get("SN89_NETWORK_LIVE_FAIL_CLOSED_S", "900"))
 DEFAULT_HORIZON_H = float(os.environ.get("SN89_NETWORK_LIVE_HORIZON_H", "8"))
 _UA = {"User-Agent": "sn89-network-live/1"}
 
@@ -112,13 +115,26 @@ def refresh_cache(*, force: bool = False) -> dict:
             tmp.write_text(json.dumps(payload), encoding="utf-8")
             os.replace(tmp, CACHE_PATH)
             return payload
-        except Exception as e:  # noqa: BLE001 — fail open to last cache
+        except Exception as e:  # noqa: BLE001
             if CACHE_PATH.exists():
                 try:
-                    return json.loads(CACHE_PATH.read_text(encoding="utf-8"))
-                except (OSError, json.JSONDecodeError):
+                    cached = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+                    age = now - float(cached.get("fetched_at") or 0)
+                    cached = dict(cached)
+                    cached["error"] = str(e)
+                    cached["stale"] = age > FAIL_CLOSED_S
+                    cached["fail_closed"] = bool(force and age > FAIL_CLOSED_S)
+                    return cached
+                except (OSError, json.JSONDecodeError, TypeError, ValueError):
                     pass
-            return {"fetched_at": 0, "n": 0, "pending": [], "error": str(e)}
+            return {
+                "fetched_at": 0,
+                "n": 0,
+                "pending": [],
+                "error": str(e),
+                "stale": True,
+                "fail_closed": bool(force),
+            }
         finally:
             fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
 
@@ -129,10 +145,18 @@ def network_live_trades(
     exclude_hotkeys: set[str] | frozenset[str] | None = None,
     force: bool = False,
 ) -> set[tuple[str, str]]:
-    """{(pair, direction)} open on-chain (pending) for other hotkeys."""
+    """{(pair, direction)} open on-chain (pending) for other hotkeys.
+
+    Raises ``RuntimeError`` when ``force`` and the cache is too stale to trust
+    (caller should skip the submit rather than trade blind).
+    """
     now = float(now if now is not None else time.time())
     exclude = {h for h in (exclude_hotkeys or set()) if h}
     cache = refresh_cache(force=force)
+    if cache.get("fail_closed"):
+        raise RuntimeError(
+            f"network_live cache unusable: {cache.get('error') or 'stale'}"
+        )
     live: set[tuple[str, str]] = set()
     for row in cache.get("pending") or []:
         hk = row.get("hotkey") or ""

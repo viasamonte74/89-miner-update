@@ -201,7 +201,9 @@ def _sibling_live_trades(now: float) -> set[tuple[str, str]]:
                 o = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if o.get("event") != "submit_ok" or not o.get("ok", True):
+            if o.get("event") not in {"submit_ok", "submit_ambiguous"}:
+                continue
+            if o.get("event") == "submit_ok" and not o.get("ok", True):
                 continue
             ts = float(o.get("ts") or 0.0)
             if ts < cutoff:
@@ -216,7 +218,7 @@ def _sibling_live_trades(now: float) -> set[tuple[str, str]]:
 def _live_pairs_from_submit_log(
     path: Path, now: float, *, by_pair_only: bool, live_s: float | None = None
 ) -> set:
-    """Pairs (or (pair, dir)) still live per submit_ok lines."""
+    """Pairs (or (pair, dir)) still live per submit_ok / submit_ambiguous lines."""
     live: set = set()
     if not path.exists():
         return live
@@ -229,7 +231,9 @@ def _live_pairs_from_submit_log(
             o = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if o.get("event") != "submit_ok" or not o.get("ok", True):
+        if o.get("event") not in {"submit_ok", "submit_ambiguous"}:
+            continue
+        if o.get("event") == "submit_ok" and not o.get("ok", True):
             continue
         ts = float(o.get("ts") or 0)
         if live_s is not None:
@@ -237,7 +241,8 @@ def _live_pairs_from_submit_log(
                 continue
         else:
             hz = float(o.get("horizon_s") or 8 * 3600)
-            if now - ts > hz:
+            # Honor validator 24h pair lock even when horizon defaults to 8h.
+            if now - ts > max(hz, PAIR_LOCK_S):
                 continue
         pair = (o.get("pair") or "").upper()
         direction = (o.get("direction") or "").upper()
@@ -928,19 +933,25 @@ def run(
 
         now = time.time()
         # Keep 1m bars fresh from archive (root cause of stuck identical scores).
-        if now - last_bar_refresh >= BAR_REFRESH_S or (_bars_age_h() or 99) > 1.0:
+        age_h = _bars_age_h()
+        if now - last_bar_refresh >= BAR_REFRESH_S or (age_h or 99) > 1.0:
             try:
                 _refresh_bars(pairs)
                 last_bar_refresh = time.time()
+                age_h = _bars_age_h()
             except Exception as e:  # noqa: BLE001
                 _log(
                     {
                         "event": "bars_refresh_error",
                         "error": f"{type(e).__name__}: {e}",
+                        "bars_age_h": round(age_h or -1, 3),
                     }
                 )
                 last_bar_refresh = now  # avoid tight error loop
             cache.clear()
+        if age_h is not None and age_h > 3.0:
+            _sleep(poll_s, f"bars_stale age_h={age_h:.2f}")
+            continue
 
         st = _ensure_day_state(st, now)
         window = _window_index(now)
@@ -1174,7 +1185,22 @@ def run(
             continue
 
         # Fresh network check right before commit — avoid is_copy vs leaders.
-        net_live = _network_blocked_trades(now, force=True)
+        try:
+            net_live = _network_blocked_trades(now, force=True)
+        except RuntimeError as e:
+            _release_claim(pair, direction_use, hotkey=hk)
+            _log(
+                {
+                    "event": "skip_network_live_stale",
+                    "pair": pair,
+                    "direction": direction_use,
+                    "reason": reason,
+                    "error": str(e),
+                    "phase": "pre_submit",
+                }
+            )
+            _sleep(max(poll_s, 60.0), "network_live_stale")
+            continue
         if (pair, direction_use) in net_live:
             _release_claim(pair, direction_use, hotkey=hk)
             _log(
@@ -1213,11 +1239,28 @@ def run(
         try:
             res = submit(w, sig, ch=ch)
         except Exception as e:  # noqa: BLE001
-            _release_claim(pair, direction_use, hotkey=hk)
+            # Ambiguous: extrinsic may have landed. Keep claim, burn local gap
+            # slot, do NOT retry in 2–3 minutes (that voids the 1h gap / enables
+            # sibling copy on the released pair).
+            try:
+                record_local_submit(hk)
+            except Exception:  # noqa: BLE001
+                pass
+            st["last_submit"] = {
+                "pair": pair,
+                "direction": direction_use,
+                "score": target.get("score"),
+                "reason": reason,
+                "mark_window": mark_window,
+                "ts": time.time(),
+                "ambiguous": True,
+            }
+            _save_state(st)
             _log(
                 {
-                    "event": "submit_exception",
+                    "event": "submit_ambiguous",
                     "pair": pair,
+                    "direction": direction_use,
                     "error": f"{type(e).__name__}: {e}",
                     "trace": traceback.format_exc()[-800:],
                 }
@@ -1226,7 +1269,7 @@ def run(
                 ch.close()
             except Exception:
                 pass
-            _sleep(max(poll_s, 60.0), "submit_exception_backoff")
+            _sleep(max(poll_s, 3600.0), "submit_ambiguous_hold_gap")
             continue
         try:
             ch.close()
@@ -1260,9 +1303,30 @@ def run(
             # short sleep then resume scanning (gap guard blocks until 1h)
             _sleep(poll_s, "post_submit_scan")
         else:
-            _release_claim(pair, direction_use, hotkey=hk)
-            _log({"event": "submit_fail", "pair": pair, "result": res})
-            _sleep(max(poll_s, 120.0), "submit_fail_backoff")
+            # Same ambiguity class as exceptions — keep claim + enforce gap.
+            try:
+                record_local_submit(hk)
+            except Exception:  # noqa: BLE001
+                pass
+            st["last_submit"] = {
+                "pair": pair,
+                "direction": direction_use,
+                "score": target.get("score"),
+                "reason": reason,
+                "mark_window": mark_window,
+                "ts": time.time(),
+                "ambiguous": True,
+            }
+            _save_state(st)
+            _log(
+                {
+                    "event": "submit_ambiguous",
+                    "pair": pair,
+                    "direction": direction_use,
+                    "result": res,
+                }
+            )
+            _sleep(max(poll_s, 3600.0), "submit_ambiguous_hold_gap")
 
 
 def main(argv=None) -> int:

@@ -161,6 +161,7 @@ start_hf() {
   SN89_AUTO_CLAIM_DIR=/workspace/sn89_data/fleet_claims \
   SN89_HF_FREE_BEST=1 \
   SN89_STRICT_MODE="$strict" \
+  SN89_STRICT_BOTH_DIRS=1 \
   pm2 start /workspace/InfiniteQuant-Subnet/scripts/pm2_hf_auto.sh \
     --name "$name" \
     --interpreter bash
@@ -254,6 +255,8 @@ if [[ "$INCLUDE_H4" == "1" ]]; then
     "$LOG_H4" 1
 fi
 
+# pm2 save dumps process env into ~/.pm2/dump.pm2 — keep tokens out of miner.env
+# that is sourced into these processes, or scrub the dump after save.
 pm2 save
 pm2 list
 echo "Fleet OK: LF+HF concurrent (h1/h2/h3$([ "$INCLUDE_H4" = 1 ] && echo '/h4')), referrer=h1 for new keys via referral_onboard.py"
