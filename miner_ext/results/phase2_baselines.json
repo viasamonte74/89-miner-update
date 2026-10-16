@@ -1,0 +1,5942 @@
+{
+  "meta": {
+    "data_start": 1787645340.0,
+    "data_end": 1791532980.0,
+    "n_pairs": 30,
+    "pairs": [
+      "AAVEUSD",
+      "ADAUSD",
+      "ALGOUSD",
+      "ARBUSD",
+      "ASTERUSD",
+      "AVAXUSD",
+      "BCHUSD",
+      "BNBUSD",
+      "BTCUSD",
+      "CRVUSD",
+      "DOGEUSD",
+      "DOTUSD",
+      "ENAUSD",
+      "ETHUSD",
+      "HYPEUSD",
+      "KPEPEUSD",
+      "LINKUSD",
+      "LTCUSD",
+      "NEARUSD",
+      "PUMPUSD",
+      "SOLUSD",
+      "SUIUSD",
+      "TAOUSD",
+      "TRXUSD",
+      "UNIUSD",
+      "WLDUSD",
+      "XMRUSD",
+      "XRPUSD",
+      "ZECUSD",
+      "ZROUSD"
+    ],
+    "delay_s": 30.0,
+    "step_min": 15,
+    "k": 3,
+    "n_grid": 4192,
+    "independent_days_approx": 45.0,
+    "holdout": {
+      "start": 1790841780.0,
+      "end": 1791532980.0
+    },
+    "ts": 1791541884.0492883
+  },
+  "folds": [
+    {
+      "name": "fold1",
+      "train_start": 1787645340.0,
+      "train_end": 1787702940.0,
+      "test_start": 1787731740.0,
+      "test_end": 1788758820.0
+    },
+    {
+      "name": "fold2",
+      "train_start": 1787645340.0,
+      "train_end": 1788730020.0,
+      "test_start": 1788758820.0,
+      "test_end": 1789785900.0
+    },
+    {
+      "name": "fold3",
+      "train_start": 1787645340.0,
+      "train_end": 1789757100.0,
+      "test_start": 1789785900.0,
+      "test_end": 1790812980.0
+    }
+  ],
+  "strategies": {
+    "always_long": {
+      "folds": {
+        "fold1": {
+          "summary": {
+            "n": 39,
+            "won": 12,
+            "lost": 9,
+            "washed": 18,
+            "pending": 0,
+            "decisive": 21,
+            "hit_rate": 0.5714285714285714,
+            "wilson_lb": 0.43286092878484067,
+            "shrunk_hit_rate": 0.5454545454545454,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 12,
+            "rep_decisive": 21,
+            "trailing_wins_post_warmup": 12,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 6846,
+            "n_scheduled": 39,
+            "n_rejected_rules": 0,
+            "window": {
+              "start": 1787731740.0,
+              "end": 1788758820.0
+            },
+            "strategy": "always_long",
+            "wash_rate": 0.46153846153846156,
+            "wall_s": 30.2
+          },
+          "trades": [
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1787732130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1787735730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1787739330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 13.897743210506185
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1787788830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1787792430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1787796030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1787875230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1787878830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -97.58242803147336
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1787882430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1787961630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 55.65071140159267
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1787965230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -7.916382406322808
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1787968830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -37.24471002333059
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788048030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 61.531932951411726
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788051630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 29.706066291432133
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788055230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -10.633800110181543
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788134430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788138030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 67.29492369179053
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1788141630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1788220830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788224430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788228030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788307230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -56.649353786690206
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788310830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -38.84903265908679
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1788314430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788393630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788397230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788400830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 11.762687774155099
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788480030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788483630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 2.649769585253011
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788487230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 13.408304498269896
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788566430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 41.5011985259937
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788570030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788573630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 101.98981291950292
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788652830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 11.22263160123603
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788656430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788660030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -10.441546099113406
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788739230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788742830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788746430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            }
+          ]
+        },
+        "fold2": {
+          "summary": {
+            "n": 39,
+            "won": 16,
+            "lost": 9,
+            "washed": 14,
+            "pending": 0,
+            "decisive": 25,
+            "hit_rate": 0.64,
+            "wilson_lb": 0.5118761572707985,
+            "shrunk_hit_rate": 0.5945945945945946,
+            "qualified": true,
+            "tier_multiplier": 1.1783783783783786,
+            "rep_wins": 16,
+            "rep_decisive": 25,
+            "trailing_wins_post_warmup": 16,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 6846,
+            "n_scheduled": 39,
+            "n_rejected_rules": 0,
+            "window": {
+              "start": 1788758820.0,
+              "end": 1789785900.0
+            },
+            "strategy": "always_long",
+            "wash_rate": 0.358974358974359,
+            "wall_s": 30.2
+          },
+          "trades": [
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788759030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788762630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -85.05031145184549
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788766230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788825630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788829230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788832830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788912030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788915630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 89.32863323185278
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788919230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788998430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -107.35774116166542
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789002030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789005630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -13.967196309584828
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789084830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789088430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 85.32388457857257
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789092030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -55.91818510407456
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789171230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -12.960798895144094
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789174830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 77.12180166684674
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789178430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 8.674037440770565
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789257630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -57.85002929115421
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789261230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789264830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789344030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789347630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789351230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789430430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789434030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789437630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789516830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -85.65654709961791
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789520430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 32.46585264900724
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789524030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 63.188014147756626
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789603230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789606830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789610430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -11.150844003537136
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789689630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789693230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789696830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789776030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789779630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789783230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            }
+          ]
+        },
+        "fold3": {
+          "summary": {
+            "n": 37,
+            "won": 15,
+            "lost": 12,
+            "washed": 10,
+            "pending": 0,
+            "decisive": 27,
+            "hit_rate": 0.5555555555555556,
+            "wilson_lb": 0.43333460727087,
+            "shrunk_hit_rate": 0.5384615384615384,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 15,
+            "rep_decisive": 27,
+            "trailing_wins_post_warmup": 15,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 27033,
+            "n_scheduled": 37,
+            "n_rejected_rules": 0,
+            "window": {
+              "start": 1789785900.0,
+              "end": 1790812980.0
+            },
+            "strategy": "always_long",
+            "wash_rate": 0.2702702702702703,
+            "wall_s": 42.9
+          },
+          "trades": [
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789785930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789789530.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789793130.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789862430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789866030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789869630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "KPEPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789948830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 203.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789952430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "ZECUSD",
+              "direction": "LONG",
+              "t0_unix": 1789956030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 68.26164755782327
+            },
+            {
+              "pair": "DOGEUSD",
+              "direction": "LONG",
+              "t0_unix": 1790035230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 133.0
+            },
+            {
+              "pair": "LINKUSD",
+              "direction": "LONG",
+              "t0_unix": 1790038830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -163.0
+            },
+            {
+              "pair": "ZROUSD",
+              "direction": "LONG",
+              "t0_unix": 1790042430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 117.86309091685366
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1790121630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -50.609421787356794
+            },
+            {
+              "pair": "ZECUSD",
+              "direction": "LONG",
+              "t0_unix": 1790125230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -7.119861317483059
+            },
+            {
+              "pair": "AVAXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790128830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 150.0
+            },
+            {
+              "pair": "DOGEUSD",
+              "direction": "LONG",
+              "t0_unix": 1790208030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 133.0
+            },
+            {
+              "pair": "ZROUSD",
+              "direction": "LONG",
+              "t0_unix": 1790211630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 317.0
+            },
+            {
+              "pair": "LTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1790215230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 121.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1790294430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -41.47435403693588
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1790298030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -6.390320794104105
+            },
+            {
+              "pair": "ZECUSD",
+              "direction": "LONG",
+              "t0_unix": 1790301630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 298.0
+            },
+            {
+              "pair": "LTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1790380830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 121.0
+            },
+            {
+              "pair": "CRVUSD",
+              "direction": "LONG",
+              "t0_unix": 1790384430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -73.94686045191392
+            },
+            {
+              "pair": "BNBUSD",
+              "direction": "LONG",
+              "t0_unix": 1790388030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -61.07421031948009
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1790467230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 37.31520090978014
+            },
+            {
+              "pair": "ADAUSD",
+              "direction": "LONG",
+              "t0_unix": 1790470830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 195.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1790474430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "LTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1790553630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -121.0
+            },
+            {
+              "pair": "ALGOUSD",
+              "direction": "LONG",
+              "t0_unix": 1790557230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -199.0
+            },
+            {
+              "pair": "CRVUSD",
+              "direction": "LONG",
+              "t0_unix": 1790560830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -294.0
+            },
+            {
+              "pair": "NEARUSD",
+              "direction": "LONG",
+              "t0_unix": 1790640030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -257.0
+            },
+            {
+              "pair": "ADAUSD",
+              "direction": "LONG",
+              "t0_unix": 1790643630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -195.0
+            },
+            {
+              "pair": "DOTUSD",
+              "direction": "LONG",
+              "t0_unix": 1790647230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 186.0
+            },
+            {
+              "pair": "ALGOUSD",
+              "direction": "LONG",
+              "t0_unix": 1790726430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -199.0
+            },
+            {
+              "pair": "CRVUSD",
+              "direction": "LONG",
+              "t0_unix": 1790730030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 294.0
+            },
+            {
+              "pair": "ARBUSD",
+              "direction": "LONG",
+              "t0_unix": 1790733630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -61.12170554007145
+            },
+            {
+              "pair": "NEARUSD",
+              "direction": "LONG",
+              "t0_unix": 1790812830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -257.0
+            }
+          ]
+        }
+      },
+      "holdout": {
+        "summary": {
+          "n": 25,
+          "won": 7,
+          "lost": 6,
+          "washed": 12,
+          "pending": 0,
+          "decisive": 13,
+          "hit_rate": 0.5384615384615384,
+          "wilson_lb": 0.36712615553223044,
+          "shrunk_hit_rate": 0.52,
+          "qualified": false,
+          "tier_multiplier": 1.0,
+          "rep_wins": 7,
+          "rep_decisive": 13,
+          "trailing_wins_post_warmup": 7,
+          "qualify_min_decisive": 8,
+          "qualify_lb_floor": 0.5,
+          "n_candidates": 20451,
+          "n_scheduled": 25,
+          "n_rejected_rules": 0,
+          "window": {
+            "start": 1790841780.0,
+            "end": 1791532980.0
+          },
+          "strategy": "always_long",
+          "wash_rate": 0.48,
+          "wall_s": 35.4
+        },
+        "trades": [
+          {
+            "pair": "NEARUSD",
+            "direction": "LONG",
+            "t0_unix": 1790842530.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -257.0
+          },
+          {
+            "pair": "ADAUSD",
+            "direction": "LONG",
+            "t0_unix": 1790846130.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 24.477575708533433
+          },
+          {
+            "pair": "DOTUSD",
+            "direction": "LONG",
+            "t0_unix": 1790849730.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -186.0
+          },
+          {
+            "pair": "ALGOUSD",
+            "direction": "LONG",
+            "t0_unix": 1790899230.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 199.0
+          },
+          {
+            "pair": "CRVUSD",
+            "direction": "LONG",
+            "t0_unix": 1790902830.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 294.0
+          },
+          {
+            "pair": "ARBUSD",
+            "direction": "LONG",
+            "t0_unix": 1790906430.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 311.0
+          },
+          {
+            "pair": "ADAUSD",
+            "direction": "LONG",
+            "t0_unix": 1790985630.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -6.3525891924021485
+          },
+          {
+            "pair": "DOTUSD",
+            "direction": "LONG",
+            "t0_unix": 1790989230.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -132.44463556224537
+          },
+          {
+            "pair": "KPEPEUSD",
+            "direction": "LONG",
+            "t0_unix": 1790992830.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -10.573308270677074
+          },
+          {
+            "pair": "CRVUSD",
+            "direction": "LONG",
+            "t0_unix": 1791072030.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -151.08952480966306
+          },
+          {
+            "pair": "ARBUSD",
+            "direction": "LONG",
+            "t0_unix": 1791075630.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -125.24037276268363
+          },
+          {
+            "pair": "LINKUSD",
+            "direction": "LONG",
+            "t0_unix": 1791079230.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 26.64393051262897
+          },
+          {
+            "pair": "ADAUSD",
+            "direction": "LONG",
+            "t0_unix": 1791158430.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 195.0
+          },
+          {
+            "pair": "DOTUSD",
+            "direction": "LONG",
+            "t0_unix": 1791162030.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 186.0
+          },
+          {
+            "pair": "SOLUSD",
+            "direction": "LONG",
+            "t0_unix": 1791165630.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -45.41513562610817
+          },
+          {
+            "pair": "CRVUSD",
+            "direction": "LONG",
+            "t0_unix": 1791244830.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -294.0
+          },
+          {
+            "pair": "ARBUSD",
+            "direction": "LONG",
+            "t0_unix": 1791248430.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -150.138477236285
+          },
+          {
+            "pair": "XMRUSD",
+            "direction": "LONG",
+            "t0_unix": 1791252030.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -62.37302633923999
+          },
+          {
+            "pair": "ADAUSD",
+            "direction": "LONG",
+            "t0_unix": 1791331230.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -195.0
+          },
+          {
+            "pair": "DOTUSD",
+            "direction": "LONG",
+            "t0_unix": 1791334830.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -186.0
+          },
+          {
+            "pair": "PUMPUSD",
+            "direction": "LONG",
+            "t0_unix": 1791338430.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 328.0
+          },
+          {
+            "pair": "ARBUSD",
+            "direction": "LONG",
+            "t0_unix": 1791417630.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -50.37986960504291
+          },
+          {
+            "pair": "XMRUSD",
+            "direction": "LONG",
+            "t0_unix": 1791421230.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 20.031079612313437
+          },
+          {
+            "pair": "ASTERUSD",
+            "direction": "LONG",
+            "t0_unix": 1791424830.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -146.0
+          },
+          {
+            "pair": "DOTUSD",
+            "direction": "LONG",
+            "t0_unix": 1791504030.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 186.0
+          }
+        ]
+      },
+      "aggregate_folds": {
+        "won": 43,
+        "lost": 30,
+        "decisive": 73,
+        "hit_rate": 0.589041095890411,
+        "wilson_lb": 0.5140708328870667,
+        "qualified": true,
+        "washed": 42,
+        "per_fold_hit": [
+          0.5714285714285714,
+          0.64,
+          0.5555555555555556
+        ],
+        "per_fold_wilson": [
+          0.43286092878484067,
+          0.5118761572707985,
+          0.43333460727087
+        ],
+        "per_fold_decisive": [
+          21,
+          25,
+          27
+        ]
+      }
+    },
+    "random": {
+      "folds": {
+        "fold1": {
+          "summary": {
+            "n": 36,
+            "won": 6,
+            "lost": 11,
+            "washed": 19,
+            "pending": 0,
+            "decisive": 17,
+            "hit_rate": 0.35294117647058826,
+            "wilson_lb": 0.22345920562998417,
+            "shrunk_hit_rate": 0.41379310344827586,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 6,
+            "rep_decisive": 17,
+            "trailing_wins_post_warmup": 6,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 6846,
+            "n_scheduled": 36,
+            "n_rejected_rules": 1,
+            "window": {
+              "start": 1787731740.0,
+              "end": 1788758820.0
+            },
+            "strategy": "random",
+            "wash_rate": 0.5277777777777778,
+            "wall_s": 25.6
+          },
+          "trades": [
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787737530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1787782530.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -67.51627981303221
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787787930.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787807730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1787846430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1787870730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1787949030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1787952630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 48.40071674253066
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1787959830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -11.215629522429222
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1787970630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 5.4771923267757385
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787995830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -61.22868296692045
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788007530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788088530.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788132630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788165930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -50.67524444104057
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788209130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 14.342854834147012
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788219030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -31.508491271376872
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788224430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788249630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788345930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788360330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 123.46243541085502
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788384630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788459330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -23.3211744304248
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788471930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788478230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -44.012458911445705
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788490830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 14.524870252147979
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788494430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -51.796477591989806
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788534030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -42.62819199081892
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788599730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 68.09959565865115
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788615930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788630330.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788672630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 52.49081909627829
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788705930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 38.67888986562853
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788713130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 78.25224842433417
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788742830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 84.37036191346094
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788757230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            }
+          ]
+        },
+        "fold2": {
+          "summary": {
+            "n": 33,
+            "won": 11,
+            "lost": 8,
+            "washed": 14,
+            "pending": 0,
+            "decisive": 19,
+            "hit_rate": 0.5789473684210527,
+            "wilson_lb": 0.43325353651508164,
+            "shrunk_hit_rate": 0.5483870967741935,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 11,
+            "rep_decisive": 19,
+            "trailing_wins_post_warmup": 11,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 6846,
+            "n_scheduled": 33,
+            "n_rejected_rules": 1,
+            "window": {
+              "start": 1788758820.0,
+              "end": 1789785900.0
+            },
+            "strategy": "random",
+            "wash_rate": 0.42424242424242425,
+            "wall_s": 23.6
+          },
+          "trades": [
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788762630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 85.08715786303226
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788787830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788795930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 0.35216641036779245
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788900330.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788911130.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788997530.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 11.158223610801159
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789001130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -28.423510303522484
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789032630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789069530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789136130.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789170330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 14.094131716067846
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789245930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -4.082955281918341
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789253130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 21.302383663277976
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789256730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -91.89640768588158
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789271130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789281030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789302630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -64.65180478149904
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789362030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 67.361599624822
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789409730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789416030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789462830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789515930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -17.84651992861392
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789539330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 39.961703367607555
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789552830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789560030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789621230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789661730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789688730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789762530.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789766130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -18.709995076317085
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789775130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789781430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 18.6920485009469
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789785030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            }
+          ]
+        },
+        "fold3": {
+          "summary": {
+            "n": 30,
+            "won": 7,
+            "lost": 10,
+            "washed": 13,
+            "pending": 0,
+            "decisive": 17,
+            "hit_rate": 0.4117647058823529,
+            "wilson_lb": 0.2732486893225789,
+            "shrunk_hit_rate": 0.4482758620689655,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 7,
+            "rep_decisive": 17,
+            "trailing_wins_post_warmup": 7,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 27033,
+            "n_scheduled": 30,
+            "n_rejected_rules": 1,
+            "window": {
+              "start": 1789785900.0,
+              "end": 1790812980.0
+            },
+            "strategy": "random",
+            "wash_rate": 0.43333333333333335,
+            "wall_s": 37.1
+          },
+          "trades": [
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789791330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -59.93720863856912
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789840830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 48.82656754137377
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789848030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789947930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "CRVUSD",
+              "direction": "LONG",
+              "t0_unix": 1790031630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -294.0
+            },
+            {
+              "pair": "ADAUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790105430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -99.9783511444367
+            },
+            {
+              "pair": "SUIUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790119830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 1.4553922282064182
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1790157630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "ZECUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790167530.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 298.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1790175630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "AVAXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790249430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -150.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1790276430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -50.9426244747714
+            },
+            {
+              "pair": "KPEPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790293530.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 43.03023440153986
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790334030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -17.82610633272231
+            },
+            {
+              "pair": "ENAUSD",
+              "direction": "LONG",
+              "t0_unix": 1790361030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 295.0
+            },
+            {
+              "pair": "ADAUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790375430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -195.0
+            },
+            {
+              "pair": "XMRUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790453730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -185.07614121228102
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1790466330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 86.20334089503004
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790517630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 33.9976001693998
+            },
+            {
+              "pair": "AVAXUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790521230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 150.0
+            },
+            {
+              "pair": "ARBUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790537430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 311.0
+            },
+            {
+              "pair": "CRVUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790568030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 110.7099519108329
+            },
+            {
+              "pair": "NEARUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790625630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 257.0
+            },
+            {
+              "pair": "ENAUSD",
+              "direction": "LONG",
+              "t0_unix": 1790634630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -79.37287569500467
+            },
+            {
+              "pair": "DOGEUSD",
+              "direction": "LONG",
+              "t0_unix": 1790688630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -133.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1790713830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "NEARUSD",
+              "direction": "LONG",
+              "t0_unix": 1790721030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 257.0
+            },
+            {
+              "pair": "ARBUSD",
+              "direction": "LONG",
+              "t0_unix": 1790754330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 311.0
+            },
+            {
+              "pair": "AVAXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790787630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -150.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1790811030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -8.923591745677973
+            }
+          ]
+        }
+      },
+      "holdout": {
+        "summary": {
+          "n": 19,
+          "won": 4,
+          "lost": 8,
+          "washed": 7,
+          "pending": 0,
+          "decisive": 12,
+          "hit_rate": 0.3333333333333333,
+          "wilson_lb": 0.1886047221335815,
+          "shrunk_hit_rate": 0.4166666666666667,
+          "qualified": false,
+          "tier_multiplier": 1.0,
+          "rep_wins": 4,
+          "rep_decisive": 12,
+          "trailing_wins_post_warmup": 4,
+          "qualify_min_decisive": 8,
+          "qualify_lb_floor": 0.5,
+          "n_candidates": 20451,
+          "n_scheduled": 19,
+          "n_rejected_rules": 1,
+          "window": {
+            "start": 1790841780.0,
+            "end": 1791532980.0
+          },
+          "strategy": "random",
+          "wash_rate": 0.3684210526315789,
+          "wall_s": 26.0
+        },
+        "trades": [
+          {
+            "pair": "TRXUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790893830.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 19.860824896215128
+          },
+          {
+            "pair": "BNBUSD",
+            "direction": "LONG",
+            "t0_unix": 1790897430.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 94.0
+          },
+          {
+            "pair": "LINKUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790979330.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -163.0
+          },
+          {
+            "pair": "UNIUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790984730.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -280.0
+          },
+          {
+            "pair": "BCHUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790998230.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -51.57206432851763
+          },
+          {
+            "pair": "AVAXUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791059430.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 66.07335490830727
+          },
+          {
+            "pair": "DOGEUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791070230.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -17.9267426085833
+          },
+          {
+            "pair": "ALGOUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791105330.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -199.0
+          },
+          {
+            "pair": "TRXUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791145830.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 9.988520655367106
+          },
+          {
+            "pair": "ENAUSD",
+            "direction": "LONG",
+            "t0_unix": 1791156630.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 221.87332148907217
+          },
+          {
+            "pair": "XRPUSD",
+            "direction": "LONG",
+            "t0_unix": 1791203430.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -123.0
+          },
+          {
+            "pair": "DOGEUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791225030.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -133.0
+          },
+          {
+            "pair": "XMRUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791243930.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 5.6843414157571726
+          },
+          {
+            "pair": "ARBUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791290730.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -311.0
+          },
+          {
+            "pair": "BTCUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791329430.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 105.0
+          },
+          {
+            "pair": "UNIUSD",
+            "direction": "LONG",
+            "t0_unix": 1791405930.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 280.0
+          },
+          {
+            "pair": "NEARUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791415830.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -257.0
+          },
+          {
+            "pair": "ZECUSD",
+            "direction": "LONG",
+            "t0_unix": 1791497730.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 298.0
+          },
+          {
+            "pair": "TAOUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791502230.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -165.0
+          }
+        ]
+      },
+      "aggregate_folds": {
+        "won": 24,
+        "lost": 29,
+        "decisive": 53,
+        "hit_rate": 0.4528301886792453,
+        "wilson_lb": 0.36793539006333914,
+        "qualified": false,
+        "washed": 46,
+        "per_fold_hit": [
+          0.35294117647058826,
+          0.5789473684210527,
+          0.4117647058823529
+        ],
+        "per_fold_wilson": [
+          0.22345920562998417,
+          0.43325353651508164,
+          0.2732486893225789
+        ],
+        "per_fold_decisive": [
+          17,
+          19,
+          17
+        ]
+      }
+    },
+    "momentum": {
+      "folds": {
+        "fold1": {
+          "summary": {
+            "n": 34,
+            "won": 6,
+            "lost": 14,
+            "washed": 14,
+            "pending": 0,
+            "decisive": 20,
+            "hit_rate": 0.3,
+            "wilson_lb": 0.18802593214833443,
+            "shrunk_hit_rate": 0.375,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 6,
+            "rep_decisive": 20,
+            "trailing_wins_post_warmup": 6,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 6829,
+            "n_scheduled": 34,
+            "n_rejected_rules": 1,
+            "window": {
+              "start": 1787731740.0,
+              "end": 1788758820.0
+            },
+            "strategy": "momentum",
+            "wash_rate": 0.4117647058823529,
+            "wall_s": 25.1
+          },
+          "trades": [
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1787784330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1787787930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1787820330.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1787843730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1787859930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787932830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787941830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1787946330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 22.870003993176812
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1787974230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -95.48182676781569
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1788015630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 14.240956992310423
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788035430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 37.687112277953666
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788133530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788194730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -30.319539521993537
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1788201930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788288330.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788291930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 118.11095604054148
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788297330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1788356730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 46.4315210603709
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788364830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 30.38247617180683
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788370230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -55.48083389374695
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788447630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788479130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788527730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788534030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788537630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -29.748905075022673
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788591630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1788614130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 16.468080984210182
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788628530.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 63.32177139630482
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788724830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788732930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -0.345448997332662
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1788738330.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788749130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788752730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 16.183540387453156
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788758130.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            }
+          ]
+        },
+        "fold2": {
+          "summary": {
+            "n": 34,
+            "won": 12,
+            "lost": 10,
+            "washed": 12,
+            "pending": 0,
+            "decisive": 22,
+            "hit_rate": 0.5454545454545454,
+            "wilson_lb": 0.4110164524721347,
+            "shrunk_hit_rate": 0.5294117647058824,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 12,
+            "rep_decisive": 22,
+            "trailing_wins_post_warmup": 12,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 6835,
+            "n_scheduled": 34,
+            "n_rejected_rules": 1,
+            "window": {
+              "start": 1788758820.0,
+              "end": 1789785900.0
+            },
+            "strategy": "momentum",
+            "wash_rate": 0.35294117647058826,
+            "wall_s": 26.2
+          },
+          "trades": [
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788795930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788799530.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 21.146953405016387
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788811230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788882330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788896730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 57.60651937194833
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788908430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788992130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -55.47199326153643
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788995730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 63.03888075483975
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789046130.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789057830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789082130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789135230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789144230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789153230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 124.3083548233656
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789174830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -77.12180166684674
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789197330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 2.338236544511811
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789202730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -8.887133405747013
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789339530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789343130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789411530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789421430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789427730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789500630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789506030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789514130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 41.1352288308796
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789587030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789590630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789601430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 37.74602318684036
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789654530.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 110.27848962191982
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789659030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 26.520101468213955
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789740930.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789772430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789777830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789785030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            }
+          ]
+        },
+        "fold3": {
+          "summary": {
+            "n": 35,
+            "won": 13,
+            "lost": 18,
+            "washed": 4,
+            "pending": 0,
+            "decisive": 31,
+            "hit_rate": 0.41935483870967744,
+            "wilson_lb": 0.3126487135081697,
+            "shrunk_hit_rate": 0.4418604651162791,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 13,
+            "rep_decisive": 31,
+            "trailing_wins_post_warmup": 13,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 26979,
+            "n_scheduled": 35,
+            "n_rejected_rules": 0,
+            "window": {
+              "start": 1789785900.0,
+              "end": 1790812980.0
+            },
+            "strategy": "momentum",
+            "wash_rate": 0.11428571428571428,
+            "wall_s": 42.6
+          },
+          "trades": [
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789811130.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789855230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789860630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789874130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 97.7598353518562
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789922730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789945230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 34.35802772116676
+            },
+            {
+              "pair": "KPEPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1790002830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 203.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1790020830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "NEARUSD",
+              "direction": "LONG",
+              "t0_unix": 1790031630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -257.0
+            },
+            {
+              "pair": "BCHUSD",
+              "direction": "LONG",
+              "t0_unix": 1790082930.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 151.0
+            },
+            {
+              "pair": "ZROUSD",
+              "direction": "LONG",
+              "t0_unix": 1790095530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -317.0
+            },
+            {
+              "pair": "UNIUSD",
+              "direction": "LONG",
+              "t0_unix": 1790118030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 280.0
+            },
+            {
+              "pair": "NEARUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790180130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -257.0
+            },
+            {
+              "pair": "ZROUSD",
+              "direction": "LONG",
+              "t0_unix": 1790187330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 193.14928761804322
+            },
+            {
+              "pair": "BCHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790197230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -151.0
+            },
+            {
+              "pair": "LTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1790219730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 121.0
+            },
+            {
+              "pair": "NEARUSD",
+              "direction": "LONG",
+              "t0_unix": 1790267430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -257.0
+            },
+            {
+              "pair": "XMRUSD",
+              "direction": "LONG",
+              "t0_unix": 1790281830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -216.0
+            },
+            {
+              "pair": "SUIUSD",
+              "direction": "LONG",
+              "t0_unix": 1790335830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 176.0
+            },
+            {
+              "pair": "NEARUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790357430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -257.0
+            },
+            {
+              "pair": "ZROUSD",
+              "direction": "LONG",
+              "t0_unix": 1790361930.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 317.0
+            },
+            {
+              "pair": "ZECUSD",
+              "direction": "LONG",
+              "t0_unix": 1790459130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -136.57282888052066
+            },
+            {
+              "pair": "ARBUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790463630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -311.0
+            },
+            {
+              "pair": "NEARUSD",
+              "direction": "LONG",
+              "t0_unix": 1790488830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -257.0
+            },
+            {
+              "pair": "SUIUSD",
+              "direction": "LONG",
+              "t0_unix": 1790496930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -176.0
+            },
+            {
+              "pair": "ENAUSD",
+              "direction": "LONG",
+              "t0_unix": 1790535630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -295.0
+            },
+            {
+              "pair": "ZROUSD",
+              "direction": "LONG",
+              "t0_unix": 1790586030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -317.0
+            },
+            {
+              "pair": "CRVUSD",
+              "direction": "LONG",
+              "t0_unix": 1790638230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -294.0
+            },
+            {
+              "pair": "ZECUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790645430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -298.0
+            },
+            {
+              "pair": "AAVEUSD",
+              "direction": "LONG",
+              "t0_unix": 1790667930.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "ZROUSD",
+              "direction": "LONG",
+              "t0_unix": 1790723730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -317.0
+            },
+            {
+              "pair": "ZROUSD",
+              "direction": "LONG",
+              "t0_unix": 1790730930.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 317.0
+            },
+            {
+              "pair": "ENAUSD",
+              "direction": "LONG",
+              "t0_unix": 1790776830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -295.0
+            },
+            {
+              "pair": "NEARUSD",
+              "direction": "LONG",
+              "t0_unix": 1790786730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -257.0
+            },
+            {
+              "pair": "ZROUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790812830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 317.0
+            }
+          ]
+        }
+      },
+      "holdout": {
+        "summary": {
+          "n": 22,
+          "won": 8,
+          "lost": 11,
+          "washed": 3,
+          "pending": 0,
+          "decisive": 19,
+          "hit_rate": 0.42105263157894735,
+          "wilson_lb": 0.28792229227252414,
+          "shrunk_hit_rate": 0.45161290322580644,
+          "qualified": false,
+          "tier_multiplier": 1.0,
+          "rep_wins": 8,
+          "rep_decisive": 19,
+          "trailing_wins_post_warmup": 8,
+          "qualify_min_decisive": 8,
+          "qualify_lb_floor": 0.5,
+          "n_candidates": 20419,
+          "n_scheduled": 22,
+          "n_rejected_rules": 0,
+          "window": {
+            "start": 1790841780.0,
+            "end": 1791532980.0
+          },
+          "strategy": "momentum",
+          "wash_rate": 0.13636363636363635,
+          "wall_s": 32.6
+        },
+        "trades": [
+          {
+            "pair": "ZROUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790892030.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -317.0
+          },
+          {
+            "pair": "ZECUSD",
+            "direction": "LONG",
+            "t0_unix": 1790896530.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 298.0
+          },
+          {
+            "pair": "ZROUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790965830.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -131.0068326839454
+          },
+          {
+            "pair": "ARBUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790969430.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -311.0
+          },
+          {
+            "pair": "HYPEUSD",
+            "direction": "LONG",
+            "t0_unix": 1790982030.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 184.0
+          },
+          {
+            "pair": "ZROUSD",
+            "direction": "LONG",
+            "t0_unix": 1791018030.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 317.0
+          },
+          {
+            "pair": "SUIUSD",
+            "direction": "LONG",
+            "t0_unix": 1791021630.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -74.36200777420922
+          },
+          {
+            "pair": "TAOUSD",
+            "direction": "LONG",
+            "t0_unix": 1791066630.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 165.0
+          },
+          {
+            "pair": "ADAUSD",
+            "direction": "LONG",
+            "t0_unix": 1791153930.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -195.0
+          },
+          {
+            "pair": "NEARUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791157530.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -257.0
+          },
+          {
+            "pair": "ENAUSD",
+            "direction": "LONG",
+            "t0_unix": 1791186330.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 295.0
+          },
+          {
+            "pair": "ZROUSD",
+            "direction": "LONG",
+            "t0_unix": 1791215130.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 317.0
+          },
+          {
+            "pair": "NEARUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791243930.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -257.0
+          },
+          {
+            "pair": "ZROUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791248430.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -317.0
+          },
+          {
+            "pair": "ADAUSD",
+            "direction": "LONG",
+            "t0_unix": 1791278130.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -195.0
+          },
+          {
+            "pair": "NEARUSD",
+            "direction": "LONG",
+            "t0_unix": 1791319530.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -257.0
+          },
+          {
+            "pair": "ARBUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791339330.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -16.64161477345807
+          },
+          {
+            "pair": "CRVUSD",
+            "direction": "LONG",
+            "t0_unix": 1791414030.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 294.0
+          },
+          {
+            "pair": "ALGOUSD",
+            "direction": "LONG",
+            "t0_unix": 1791451830.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 199.0
+          },
+          {
+            "pair": "ARBUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791475230.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -311.0
+          },
+          {
+            "pair": "PUMPUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791480630.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -328.0
+          },
+          {
+            "pair": "BCHUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791504030.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -151.0
+          }
+        ]
+      },
+      "aggregate_folds": {
+        "won": 31,
+        "lost": 42,
+        "decisive": 73,
+        "hit_rate": 0.4246575342465753,
+        "wilson_lb": 0.3529733872166365,
+        "qualified": false,
+        "washed": 30,
+        "per_fold_hit": [
+          0.3,
+          0.5454545454545454,
+          0.41935483870967744
+        ],
+        "per_fold_wilson": [
+          0.18802593214833443,
+          0.4110164524721347,
+          0.3126487135081697
+        ],
+        "per_fold_decisive": [
+          20,
+          22,
+          31
+        ]
+      }
+    },
+    "mean_reversion": {
+      "folds": {
+        "fold1": {
+          "summary": {
+            "n": 39,
+            "won": 12,
+            "lost": 7,
+            "washed": 20,
+            "pending": 0,
+            "decisive": 19,
+            "hit_rate": 0.631578947368421,
+            "wilson_lb": 0.4846387406913872,
+            "shrunk_hit_rate": 0.5806451612903226,
+            "qualified": false,
+            "tier_multiplier": 1.1225806451612905,
+            "rep_wins": 12,
+            "rep_decisive": 19,
+            "trailing_wins_post_warmup": 12,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 5202,
+            "n_scheduled": 39,
+            "n_rejected_rules": 0,
+            "window": {
+              "start": 1787731740.0,
+              "end": 1788758820.0
+            },
+            "strategy": "mean_reversion",
+            "wash_rate": 0.5128205128205128,
+            "wall_s": 28.2
+          },
+          "trades": [
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787778930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 18.280607322398822
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787782530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787787930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 25.549891855655762
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787819430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787841930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787868930.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1787926530.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1787933730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787958030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -46.505890334915854
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788014730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -26.38576395990926
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788030930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 41.23222748815187
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788037230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 5.735772098654894
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788106530.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788111030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788132630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 101.97802197802167
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788194730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 30.319539521993537
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788201930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 91.98502475745707
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788217230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 25.847360513382057
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788251430.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -67.37718975866716
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788288330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788293730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 0.9658569565859102
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788356730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788388230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 115.1744430432959
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788391830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -69.45312539064308
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788447630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788474630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788479130.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788525030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788555630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -41.75315817567213
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788562830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 12.652544794089668
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788644730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -109.22598132717525
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1788648330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788651930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -0.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788657330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788694230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788729330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 19.710514265236917
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788748230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788752730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -31.14071711546551
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788758130.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            }
+          ]
+        },
+        "fold2": {
+          "summary": {
+            "n": 32,
+            "won": 9,
+            "lost": 12,
+            "washed": 11,
+            "pending": 0,
+            "decisive": 21,
+            "hit_rate": 0.42857142857142855,
+            "wilson_lb": 0.3003667169799753,
+            "shrunk_hit_rate": 0.45454545454545453,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 9,
+            "rep_decisive": 21,
+            "trailing_wins_post_warmup": 9,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 5333,
+            "n_scheduled": 32,
+            "n_rejected_rules": 0,
+            "window": {
+              "start": 1788758820.0,
+              "end": 1789785900.0
+            },
+            "strategy": "mean_reversion",
+            "wash_rate": 0.34375,
+            "wall_s": 25.2
+          },
+          "trades": [
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788795030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788821130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -50.77688636132832
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788824730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788867030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788880530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788905730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -168.80549901171136
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788983130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788992130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 55.47199326153643
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788995730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1789082130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 18.206067277769833
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789164030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 1.5936254980083306
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789167630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 40.8561862244898
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789195530.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -84.42087281250804
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789237830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 5.404874213835751
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789242330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -36.659108087679115
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789337730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789341330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789416930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789425030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789428630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789497930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789514130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -41.1352288308796
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789558230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789580730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789587030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789648230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789674330.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789682430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 123.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789739130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789772430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789779630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 39.30499944899533
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789785030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            }
+          ]
+        },
+        "fold3": {
+          "summary": {
+            "n": 35,
+            "won": 11,
+            "lost": 14,
+            "washed": 10,
+            "pending": 0,
+            "decisive": 25,
+            "hit_rate": 0.44,
+            "wilson_lb": 0.32039392043342585,
+            "shrunk_hit_rate": 0.4594594594594595,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 11,
+            "rep_decisive": 25,
+            "trailing_wins_post_warmup": 11,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 20632,
+            "n_scheduled": 35,
+            "n_rejected_rules": 1,
+            "window": {
+              "start": 1789785900.0,
+              "end": 1790812980.0
+            },
+            "strategy": "mean_reversion",
+            "wash_rate": 0.2857142857142857,
+            "wall_s": 44.1
+          },
+          "trades": [
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789824630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -17.85782134579685
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789841730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -24.37923250564298
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789852530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789872330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -26.073676760904387
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789921830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789938930.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789949730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790020830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "UNIUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790026230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -280.0
+            },
+            {
+              "pair": "BCHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790080230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -151.0
+            },
+            {
+              "pair": "ARBUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790117130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -311.0
+            },
+            {
+              "pair": "XMRUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790120730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 216.0
+            },
+            {
+              "pair": "DOGEUSD",
+              "direction": "LONG",
+              "t0_unix": 1790172930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -133.0
+            },
+            {
+              "pair": "ZECUSD",
+              "direction": "LONG",
+              "t0_unix": 1790202630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 298.0
+            },
+            {
+              "pair": "ARBUSD",
+              "direction": "LONG",
+              "t0_unix": 1790206230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 12.916916547494129
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790237730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -51.0
+            },
+            {
+              "pair": "UNIUSD",
+              "direction": "LONG",
+              "t0_unix": 1790241330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 280.0
+            },
+            {
+              "pair": "ARBUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790278230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 311.0
+            },
+            {
+              "pair": "LTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790375430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -121.0
+            },
+            {
+              "pair": "CRVUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790379930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 124.245451603373
+            },
+            {
+              "pair": "ZECUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790458230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 91.86193602795012
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790461830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -33.219832239847186
+            },
+            {
+              "pair": "LTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790466330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 121.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1790514030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1790547330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 134.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1790550930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "NEARUSD",
+              "direction": "LONG",
+              "t0_unix": 1790588730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 257.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1790605830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "XMRUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790613030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 93.9044783799183
+            },
+            {
+              "pair": "ZECUSD",
+              "direction": "LONG",
+              "t0_unix": 1790644530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -298.0
+            },
+            {
+              "pair": "ADAUSD",
+              "direction": "LONG",
+              "t0_unix": 1790695830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -195.0
+            },
+            {
+              "pair": "ARBUSD",
+              "direction": "LONG",
+              "t0_unix": 1790725530.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 67.07256707256683
+            },
+            {
+              "pair": "AAVEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790771430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "ZROUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790805630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -317.0
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790811030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -1.1856945947126614
+            }
+          ]
+        }
+      },
+      "holdout": {
+        "summary": {
+          "n": 21,
+          "won": 8,
+          "lost": 11,
+          "washed": 2,
+          "pending": 0,
+          "decisive": 19,
+          "hit_rate": 0.42105263157894735,
+          "wilson_lb": 0.28792229227252414,
+          "shrunk_hit_rate": 0.45161290322580644,
+          "qualified": false,
+          "tier_multiplier": 1.0,
+          "rep_wins": 8,
+          "rep_decisive": 19,
+          "trailing_wins_post_warmup": 8,
+          "qualify_min_decisive": 8,
+          "qualify_lb_floor": 0.5,
+          "n_candidates": 15905,
+          "n_scheduled": 21,
+          "n_rejected_rules": 1,
+          "window": {
+            "start": 1790841780.0,
+            "end": 1791532980.0
+          },
+          "strategy": "mean_reversion",
+          "wash_rate": 0.09523809523809523,
+          "wall_s": 30.9
+        },
+        "trades": [
+          {
+            "pair": "TRXUSD",
+            "direction": "LONG",
+            "t0_unix": 1790846130.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -51.0
+          },
+          {
+            "pair": "LTCUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790875830.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -121.0
+          },
+          {
+            "pair": "CRVUSD",
+            "direction": "LONG",
+            "t0_unix": 1790891130.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 294.0
+          },
+          {
+            "pair": "BTCUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790944230.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 105.0
+          },
+          {
+            "pair": "SUIUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790983830.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -176.0
+          },
+          {
+            "pair": "ZROUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791018030.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -317.0
+          },
+          {
+            "pair": "ZROUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791054930.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 317.0
+          },
+          {
+            "pair": "BCHUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791071130.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 53.755039534957255
+          },
+          {
+            "pair": "ZECUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791152130.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 298.0
+          },
+          {
+            "pair": "UNIUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791156630.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -31.035393555203388
+          },
+          {
+            "pair": "BNBUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791166530.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 94.0
+          },
+          {
+            "pair": "ZROUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791214230.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -317.0
+          },
+          {
+            "pair": "ENAUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791233130.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 295.0
+          },
+          {
+            "pair": "BCHUSD",
+            "direction": "LONG",
+            "t0_unix": 1791324930.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -151.0
+          },
+          {
+            "pair": "ZECUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791329430.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 298.0
+          },
+          {
+            "pair": "WLDUSD",
+            "direction": "LONG",
+            "t0_unix": 1791338430.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -280.0
+          },
+          {
+            "pair": "LTCUSD",
+            "direction": "LONG",
+            "t0_unix": 1791372630.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -121.0
+          },
+          {
+            "pair": "CRVUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791412230.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -294.0
+          },
+          {
+            "pair": "DOTUSD",
+            "direction": "LONG",
+            "t0_unix": 1791472530.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -186.0
+          },
+          {
+            "pair": "DOTUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791490530.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -186.0
+          },
+          {
+            "pair": "NEARUSD",
+            "direction": "LONG",
+            "t0_unix": 1791503130.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 257.0
+          }
+        ]
+      },
+      "aggregate_folds": {
+        "won": 32,
+        "lost": 33,
+        "decisive": 65,
+        "hit_rate": 0.49230769230769234,
+        "wilson_lb": 0.4140104602519203,
+        "qualified": false,
+        "washed": 41,
+        "per_fold_hit": [
+          0.631578947368421,
+          0.42857142857142855,
+          0.44
+        ],
+        "per_fold_wilson": [
+          0.4846387406913872,
+          0.3003667169799753,
+          0.32039392043342585
+        ],
+        "per_fold_decisive": [
+          19,
+          21,
+          25
+        ]
+      }
+    },
+    "first_passage": {
+      "folds": {
+        "fold1": {
+          "summary": {
+            "n": 35,
+            "won": 5,
+            "lost": 15,
+            "washed": 15,
+            "pending": 0,
+            "decisive": 20,
+            "hit_rate": 0.25,
+            "wilson_lb": 0.14818490881959828,
+            "shrunk_hit_rate": 0.34375,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 5,
+            "rep_decisive": 20,
+            "trailing_wins_post_warmup": 5,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 6476,
+            "n_scheduled": 35,
+            "n_rejected_rules": 1,
+            "window": {
+              "start": 1787731740.0,
+              "end": 1788758820.0
+            },
+            "strategy": "first_passage",
+            "wash_rate": 0.42857142857142855,
+            "wall_s": 25.0
+          },
+          "trades": [
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1787778930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -33.904425630942576
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1787787930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -11.808699074985686
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1787843730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1787849130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1787853630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787933730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787955330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -15.240762861969243
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1787960730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 3.28379735750895
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788040830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 19.591037100527252
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788046230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -5.815030896345476
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788108330.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788133530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788138930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788219930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 12.156330409060516
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788288330.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788299130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -89.54953413100691
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788305430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 165.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788345930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788349530.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 9.465324591374278
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788361230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -69.40743403195071
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788451230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788464730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -43.314126763362175
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788479130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788513330.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1788518730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788523230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788631230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 116.53695713536872
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788645630.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788649230.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 138.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788660030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -34.47863520408381
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1788666330.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788673530.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -101.09436135772238
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1788741030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "LONG",
+              "t0_unix": 1788749130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -165.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788753630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 21.992937125334606
+            }
+          ]
+        },
+        "fold2": {
+          "summary": {
+            "n": 33,
+            "won": 4,
+            "lost": 19,
+            "washed": 10,
+            "pending": 0,
+            "decisive": 23,
+            "hit_rate": 0.17391304347826086,
+            "wilson_lb": 0.09540670644357022,
+            "shrunk_hit_rate": 0.2857142857142857,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 4,
+            "rep_decisive": 23,
+            "trailing_wins_post_warmup": 4,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 6341,
+            "n_scheduled": 33,
+            "n_rejected_rules": 0,
+            "window": {
+              "start": 1788758820.0,
+              "end": 1789785900.0
+            },
+            "strategy": "first_passage",
+            "wash_rate": 0.30303030303030304,
+            "wall_s": 23.5
+          },
+          "trades": [
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788824730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788869730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1788875130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1788883230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788961530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788965130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1788976830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789065030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789082130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789135230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789140630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789145130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789221630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 14.483195613660758
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789234230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 11.477875405683887
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789254030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -23.11502476609949
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789291830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -83.12237388104496
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789306230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789315230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789344030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789380030.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "LONG",
+              "t0_unix": 1789389930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789483530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789497930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -184.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789504230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -33.39455668725998
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789524030.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -63.193136639463944
+            },
+            {
+              "pair": "TAOUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789539330.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 63.378658677114544
+            },
+            {
+              "pair": "XRPUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789580730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -123.0
+            },
+            {
+              "pair": "HYPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1789686930.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 184.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789743630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 27.78498129144593
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789760730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789770630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -25.06122913937599
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789779630.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -39.30499944899533
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "LONG",
+              "t0_unix": 1789784130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            }
+          ]
+        },
+        "fold3": {
+          "summary": {
+            "n": 35,
+            "won": 6,
+            "lost": 20,
+            "washed": 9,
+            "pending": 0,
+            "decisive": 26,
+            "hit_rate": 0.23076923076923078,
+            "wilson_lb": 0.14282575183364726,
+            "shrunk_hit_rate": 0.3157894736842105,
+            "qualified": false,
+            "tier_multiplier": 1.0,
+            "rep_wins": 6,
+            "rep_decisive": 26,
+            "trailing_wins_post_warmup": 6,
+            "qualify_min_decisive": 8,
+            "qualify_lb_floor": 0.5,
+            "n_candidates": 24263,
+            "n_scheduled": 35,
+            "n_rejected_rules": 0,
+            "window": {
+              "start": 1789785900.0,
+              "end": 1790812980.0
+            },
+            "strategy": "first_passage",
+            "wash_rate": 0.2571428571428571,
+            "wall_s": 39.7
+          },
+          "trades": [
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789785930.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -3.2580698702304622
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "LONG",
+              "t0_unix": 1789807530.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -9.051480294173452
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789820130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 6.512736701114538
+            },
+            {
+              "pair": "SOLUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789873230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -134.0
+            },
+            {
+              "pair": "ETHUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789895730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -138.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1789902930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1789983930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "KPEPEUSD",
+              "direction": "LONG",
+              "t0_unix": 1790002830.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 203.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1790021730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790054130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -51.0
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790059530.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -51.0
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790064030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -51.0
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790156730.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 51.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790183730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -57.28265409630646
+            },
+            {
+              "pair": "DOTUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790206230.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -186.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790225130.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 105.0
+            },
+            {
+              "pair": "ARBUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790243130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -311.0
+            },
+            {
+              "pair": "LINKUSD",
+              "direction": "LONG",
+              "t0_unix": 1790276430.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -163.0
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790355630.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -51.0
+            },
+            {
+              "pair": "ENAUSD",
+              "direction": "LONG",
+              "t0_unix": 1790360130.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 295.0
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790368230.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -0.2966786821535906
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790465430.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 51.0
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790471730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -51.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "LONG",
+              "t0_unix": 1790515830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -43.20595229686139
+            },
+            {
+              "pair": "BNBUSD",
+              "direction": "LONG",
+              "t0_unix": 1790541930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -94.0
+            },
+            {
+              "pair": "UNIUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790588730.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -64.17782393714381
+            },
+            {
+              "pair": "ZECUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790592330.0,
+              "status": "won",
+              "exit_reason": "tp_touch",
+              "outcome_bps": 298.0
+            },
+            {
+              "pair": "BTCUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790596830.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -105.0
+            },
+            {
+              "pair": "ZECUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790649030.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -298.0
+            },
+            {
+              "pair": "CRVUSD",
+              "direction": "LONG",
+              "t0_unix": 1790694930.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -294.0
+            },
+            {
+              "pair": "BNBUSD",
+              "direction": "SHORT",
+              "t0_unix": 1790702130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -94.0
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790774130.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -51.0
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790777730.0,
+              "status": "lost",
+              "exit_reason": "sl_touch",
+              "outcome_bps": -51.0
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790783130.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": -33.216705788565854
+            },
+            {
+              "pair": "TRXUSD",
+              "direction": "LONG",
+              "t0_unix": 1790812830.0,
+              "status": "washed",
+              "exit_reason": "horizon_expired",
+              "outcome_bps": 0.29621291784564346
+            }
+          ]
+        }
+      },
+      "holdout": {
+        "summary": {
+          "n": 23,
+          "won": 4,
+          "lost": 9,
+          "washed": 10,
+          "pending": 0,
+          "decisive": 13,
+          "hit_rate": 0.3076923076923077,
+          "wilson_lb": 0.1731863618162234,
+          "shrunk_hit_rate": 0.4,
+          "qualified": false,
+          "tier_multiplier": 1.0,
+          "rep_wins": 4,
+          "rep_decisive": 13,
+          "trailing_wins_post_warmup": 4,
+          "qualify_min_decisive": 8,
+          "qualify_lb_floor": 0.5,
+          "n_candidates": 18880,
+          "n_scheduled": 23,
+          "n_rejected_rules": 0,
+          "window": {
+            "start": 1790841780.0,
+            "end": 1791532980.0
+          },
+          "strategy": "first_passage",
+          "wash_rate": 0.43478260869565216,
+          "wall_s": 31.8
+        },
+        "trades": [
+          {
+            "pair": "TRXUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790856030.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -51.0
+          },
+          {
+            "pair": "ZECUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790874030.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 20.86282691304638
+          },
+          {
+            "pair": "CRVUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790894730.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -168.18285042546643
+          },
+          {
+            "pair": "BTCUSD",
+            "direction": "LONG",
+            "t0_unix": 1790948730.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -105.0
+          },
+          {
+            "pair": "CRVUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790968530.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -294.0
+          },
+          {
+            "pair": "XMRUSD",
+            "direction": "SHORT",
+            "t0_unix": 1790973030.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -216.0
+          },
+          {
+            "pair": "BTCUSD",
+            "direction": "LONG",
+            "t0_unix": 1791060330.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -3.595934825155038
+          },
+          {
+            "pair": "ETHUSD",
+            "direction": "LONG",
+            "t0_unix": 1791065730.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 26.04796546784006
+          },
+          {
+            "pair": "BNBUSD",
+            "direction": "LONG",
+            "t0_unix": 1791069330.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 0.5076560883839062
+          },
+          {
+            "pair": "BTCUSD",
+            "direction": "LONG",
+            "t0_unix": 1791148530.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 105.0
+          },
+          {
+            "pair": "ETHUSD",
+            "direction": "LONG",
+            "t0_unix": 1791154830.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -138.0
+          },
+          {
+            "pair": "BTCUSD",
+            "direction": "LONG",
+            "t0_unix": 1791158430.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -105.0
+          },
+          {
+            "pair": "BNBUSD",
+            "direction": "LONG",
+            "t0_unix": 1791166530.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -94.0
+          },
+          {
+            "pair": "XMRUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791178230.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -216.0
+          },
+          {
+            "pair": "UNIUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791324030.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 280.0
+          },
+          {
+            "pair": "UNIUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791327630.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 280.0
+          },
+          {
+            "pair": "UNIUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791338430.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 192.53017036667316
+          },
+          {
+            "pair": "ETHUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791380730.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -29.90383863654345
+          },
+          {
+            "pair": "BTCUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791385230.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": -28.082439435940703
+          },
+          {
+            "pair": "TRXUSD",
+            "direction": "LONG",
+            "t0_unix": 1791426630.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 0.8928704296187291
+          },
+          {
+            "pair": "SOLUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791473430.0,
+            "status": "won",
+            "exit_reason": "tp_touch",
+            "outcome_bps": 134.0
+          },
+          {
+            "pair": "BNBUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791478830.0,
+            "status": "lost",
+            "exit_reason": "sl_touch",
+            "outcome_bps": -94.0
+          },
+          {
+            "pair": "TRXUSD",
+            "direction": "SHORT",
+            "t0_unix": 1791504030.0,
+            "status": "washed",
+            "exit_reason": "horizon_expired",
+            "outcome_bps": 19.99909778506313
+          }
+        ]
+      },
+      "aggregate_folds": {
+        "won": 15,
+        "lost": 54,
+        "decisive": 69,
+        "hit_rate": 0.21739130434782608,
+        "wilson_lb": 0.16072535127279486,
+        "qualified": false,
+        "washed": 34,
+        "per_fold_hit": [
+          0.25,
+          0.17391304347826086,
+          0.23076923076923078
+        ],
+        "per_fold_wilson": [
+          0.14818490881959828,
+          0.09540670644357022,
+          0.14282575183364726
+        ],
+        "per_fold_decisive": [
+          20,
+          23,
+          26
+        ]
+      }
+    }
+  }
+}

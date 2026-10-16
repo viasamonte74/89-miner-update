@@ -279,6 +279,19 @@ class Chain:
         self.st = bt.Subtensor(network=network or config.NETWORK)
         self._archive_st = None
 
+    def close(self) -> None:
+        """Drop substrate websockets so keepalive threads do not die noisily
+        hours later during long miner sleeps (daily quota / window waits)."""
+        for attr in ("_archive_st", "st"):
+            st = getattr(self, attr, None)
+            if st is None:
+                continue
+            try:
+                st.close()
+            except Exception:
+                pass
+            setattr(self, attr, None)
+
     def _archive(self):
         """Lazy finney-ARCHIVE subtensor for reads of state the public node has
         pruned (historic block timestamps). Created on first use; reused."""

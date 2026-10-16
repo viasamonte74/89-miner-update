@@ -1,5 +1,0 @@
-__pycache__/
-.venv/
-*.db
-.env*
-.venv-test/
