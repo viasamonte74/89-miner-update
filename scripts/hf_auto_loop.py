@@ -44,14 +44,14 @@ from sn89_signals import hf as hf_mod
 _SCRIPTS = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPTS not in sys.path:
     sys.path.insert(0, _SCRIPTS)
+import fleet_hf_diversity  # noqa: E402
 import fleet_priors  # noqa: E402
 
+_STATE_DIR = Path(os.environ.get("SN89_STATE_DIR", os.path.expanduser("~/.sn89")))
 LOG = Path(os.environ.get("SN89_HF_AUTO_LOG", "/workspace/logs/hf_auto_submit.jsonl"))
 STOP = Path(os.environ.get("SN89_HF_AUTO_STOP", "/workspace/sn89_data/STOP_HF_AUTO"))
 STATE = Path(
-    os.environ.get(
-        "SN89_HF_AUTO_STATE", os.path.expanduser("~/.sn89/hf_auto_state.json")
-    )
+    os.environ.get("SN89_HF_AUTO_STATE", str(_STATE_DIR / "hf_auto_state.json"))
 )
 CLAIM_DIR = Path(
     os.environ.get("SN89_HF_CLAIM_DIR", "/workspace/sn89_data/hf_fleet_claims")
@@ -125,6 +125,27 @@ PAIR_LOCK_S = float(os.environ.get("SN89_PAIR_LOCK_S", str(hf_mod.PAIR_LOCK_S)))
 PREFER_HZ_S = int(os.environ.get("SN89_HF_PREFER_HZ_S", "1800"))
 BAR_REFRESH_S = float(os.environ.get("SN89_HF_BAR_REFRESH_S", "300"))
 BAR_MAX_AGE_MIN = float(os.environ.get("SN89_HF_BAR_MAX_AGE_MIN", "5"))
+# Diversity guard (P0): stay above floor+margin before n hits the hard gate.
+DIVERSITY_GUARD = os.environ.get("SN89_HF_DIVERSITY_GUARD", "1").strip() not in (
+    "0",
+    "false",
+    "False",
+)
+DIVERSITY_MARGIN = float(os.environ.get("SN89_HF_DIVERSITY_MARGIN", "0.05"))
+DIVERSITY_GUARD_MIN_N = int(os.environ.get("SN89_HF_DIVERSITY_GUARD_MIN_N", "30"))
+MINORITY_EDGE_TOL = float(os.environ.get("SN89_HF_MINORITY_EDGE_TOL", "0.02"))
+ALLOW_MINORITY_EDGE = os.environ.get("SN89_HF_ALLOW_MINORITY_EDGE", "1").strip() not in (
+    "0",
+    "false",
+    "False",
+)
+DIVERSITY_PREFER_SHORT_HZ = os.environ.get(
+    "SN89_HF_DIVERSITY_PREFER_SHORT_HZ", "1"
+).strip() not in ("0", "false", "False")
+REJECT_COOLDOWN_S = float(os.environ.get("SN89_HF_REJECT_COOLDOWN_S", "900"))
+BLOCK_SIBLING_OPPOSITE = os.environ.get(
+    "SN89_HF_BLOCK_SIBLING_OPPOSITE", "1"
+).strip() not in ("0", "false", "False")
 
 # Crypto HF pairs we have 1m bars for (skip equities/FX without archive).
 # Ordered toward low-wash / top-miner LF cores (still scored; HF board gates apply).
@@ -341,6 +362,17 @@ def _prefer_minority_side(ranked: list[dict], now: float) -> list[dict]:
     return sorted(ranked, key=key)
 
 
+def _expand_opposite(live: set[tuple[str, str]]) -> set[tuple[str, str]]:
+    """Block both directions on a pair while any sibling side is open (no hedge)."""
+    if not BLOCK_SIBLING_OPPOSITE:
+        return live
+    out = set(live)
+    for pair, _d in list(live):
+        out.add((pair, "LONG"))
+        out.add((pair, "SHORT"))
+    return out
+
+
 def _hf_sibling_live(now: float) -> set[tuple[str, str]]:
     """Fleet race control while a sibling HF call is still open (horizon).
 
@@ -365,7 +397,7 @@ def _hf_sibling_live(now: float) -> set[tuple[str, str]]:
             pair, direction = o.get("pair"), o.get("direction")
             if pair and direction:
                 live.add((str(pair).upper(), str(direction).upper()))
-    return live
+    return _expand_opposite(live)
 
 
 def _release_claim(pair: str, direction: str, *, hotkey: str) -> None:
@@ -418,8 +450,9 @@ def _try_claim(pair: str, direction: str, *, hotkey: str, now: float, horizon_s:
             fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
 
 
-def _bars_age_min() -> float | None:
-    path = os.path.join(BARS_DIR, "BTCUSD.parquet")
+def _bars_age_min(pair: str = "BTCUSD") -> float | None:
+    """Age of last bar timestamp in minutes. None if missing/unreadable."""
+    path = os.path.join(BARS_DIR, f"{pair}.parquet")
     if not os.path.isfile(path):
         return None
     try:
@@ -429,6 +462,30 @@ def _bars_age_min() -> float | None:
         return (time.time() * 1000.0 - float(t[-1])) / 60_000.0
     except Exception:  # noqa: BLE001
         return None
+
+
+def _reject_cooldown_active(pair: str, now: float) -> float | None:
+    """Seconds left on reject cooldown for pair, or None."""
+    st = _load_state()
+    cool = st.get("reject_cooldown") or {}
+    until = float(cool.get(pair.upper()) or 0)
+    if until <= now:
+        return None
+    return until - now
+
+
+def _set_reject_cooldown(pair: str, now: float, reason: str | None) -> None:
+    st = _load_state()
+    cool = dict(st.get("reject_cooldown") or {})
+    cool[pair.upper()] = now + REJECT_COOLDOWN_S
+    st["reject_cooldown"] = cool
+    st["last_reject"] = {
+        "pair": pair.upper(),
+        "ts": now,
+        "reason": reason,
+        "cooldown_s": REJECT_COOLDOWN_S,
+    }
+    _save_state(st)
 
 
 def _refresh_bars(pairs: list[str]) -> None:
@@ -491,11 +548,14 @@ def _passes_quality(
         return False
     if r["vol_band_short"] < MIN_VOL_BAND_SHORT:
         return False
-    if r["edge"] < MIN_EDGE:
+    # Minority-relief rows may have edge in [-tol, MIN_EDGE); skip top-ratio cut
+    # so the diversity guard can still select them.
+    if r["edge"] < MIN_EDGE and not r.get("minority_relief"):
         return False
-    top_ratio = MIN_TOP_RATIO if pick_rank <= 0 else MIN_TOP_RATIO_OVERFLOW
-    if board_best > 0 and r["score"] < top_ratio * board_best:
-        return False
+    if not r.get("minority_relief"):
+        top_ratio = MIN_TOP_RATIO if pick_rank <= 0 else MIN_TOP_RATIO_OVERFLOW
+        if board_best > 0 and r["score"] < top_ratio * board_best:
+            return False
     floor = STRICT_MIN_SCORE if STRICT_MODE else MIN_SCORE
     if now is not None and fleet_priors.hf_hour_blocked(
         now, score=float(r["score"]), min_score=floor
@@ -591,13 +651,26 @@ def score_hf(
     else:
         edge = float(0.5 - fp)
         mom_term = max(0.0, -float(mom) * 100.0)
-    if edge <= 0:
-        return None
+    minority_relief = False
+    if edge < MIN_EDGE:
+        if not (
+            ALLOW_MINORITY_EDGE
+            and fleet_hf_diversity.minority_edge_ok(
+                edge, min_edge=MIN_EDGE, tol=MINORITY_EDGE_TOL
+            )
+        ):
+            return None
+        # Negative / sub-MIN_EDGE side kept only for diversity repair.
+        if edge < MIN_EDGE:
+            minority_relief = True
     decisive_w = max(0.15, min(1.6, vol_band / 1.0))
     recent_w = max(0.15, min(1.6, vol_band_short / 0.7))
     hz_bonus = 1.08 if horizon_s <= PREFER_HZ_S else 1.0
-    edge_term = 0.35 + 1.4 * min(edge, 0.25)
+    edge_for_score = max(edge, 0.0) if minority_relief else edge
+    edge_term = 0.35 + 1.4 * min(edge_for_score, 0.25)
     score = edge_term * decisive_w * recent_w * hz_bonus + 0.06 * mom_term
+    if minority_relief:
+        score *= 0.55  # prefer real-edge setups when both pass the guard
     score *= fleet_priors.hf_pair_dir_mult(pair, direction)
     score *= fleet_priors.hf_hour_mult(now)
     return {
@@ -610,6 +683,7 @@ def score_hf(
         "tp_bps": float(tp_bps),
         "horizon_s": int(horizon_s),
         "mom": float(mom),
+        "minority_relief": bool(minority_relief),
     }
 
 
@@ -663,6 +737,13 @@ def run(
             "strict_both_dirs": STRICT_BOTH_DIRS,
             "strict_pair_dirs": sorted(f"{p}:{d}" for p, d in STRICT_PAIR_DIRS),
             "pair_lock_s": PAIR_LOCK_S,
+            "diversity_guard": DIVERSITY_GUARD,
+            "diversity_margin": DIVERSITY_MARGIN,
+            "diversity_guard_min_n": DIVERSITY_GUARD_MIN_N,
+            "minority_edge_tol": MINORITY_EDGE_TOL,
+            "allow_minority_edge": ALLOW_MINORITY_EDGE,
+            "reject_cooldown_s": REJECT_COOLDOWN_S,
+            "block_sibling_opposite": BLOCK_SIBLING_OPPOSITE,
             "sibling_logs": [str(p) for p in _sibling_hf_logs()],
             "lf_log": str(LF_LOG),
             "fleet_priors": fleet_priors.load_stats_note(),
@@ -687,12 +768,19 @@ def run(
             _sleep(MIN_GAP_S - (now - max(today)) + 1, "hf_min_gap")
             continue
 
-        age = _bars_age_min()
+        def _any_bars_age() -> float | None:
+            for p in pairs:
+                a = _bars_age_min(p)
+                if a is not None:
+                    return a
+            return None
+
+        age = _any_bars_age()
         if now - last_bar_refresh >= BAR_REFRESH_S or (age is not None and age > BAR_MAX_AGE_MIN):
             try:
                 _refresh_bars(pairs)
                 last_bar_refresh = time.time()
-                age = _bars_age_min()
+                age = _any_bars_age()
             except Exception as e:  # noqa: BLE001
                 _log(
                     {
@@ -703,9 +791,12 @@ def run(
                 )
                 last_bar_refresh = now
             cache.clear()
-        # Do not score/submit on badly stale bars after a failed refresh.
-        if age is not None and age > BAR_MAX_AGE_MIN * 3:
-            _sleep(poll_s, f"bars_stale age_min={age:.1f}")
+        # Fail closed: missing/unreadable bars, or badly stale after refresh.
+        if age is None or age > BAR_MAX_AGE_MIN * 3:
+            _sleep(
+                poll_s,
+                f"bars_stale_or_missing age_min={round(age, 1) if age is not None else None}",
+            )
             continue
 
         lf_locked = _lf_locked_pairs_for_hotkey(now)
@@ -745,8 +836,80 @@ def run(
             free = preferred if preferred else quality
         free = _prefer_minority_side(free, now)
 
+        subs = fleet_hf_diversity.load_diversity_subs(
+            hk, log_path=LOG, state_dir=_STATE_DIR
+        )
+        cur_div = hf_mod.hf_diversity(subs, now)
+        below_target = False
+        if DIVERSITY_GUARD and int(cur_div.get("n") or 0) >= DIVERSITY_GUARD_MIN_N:
+            below_target = float(cur_div.get("share") or 0) < (
+                float(cur_div.get("floor") or 0) + DIVERSITY_MARGIN
+            )
+        if below_target and DIVERSITY_PREFER_SHORT_HZ:
+            free = sorted(
+                free,
+                key=lambda r: (
+                    0 if int(r.get("horizon_s") or 0) <= PREFER_HZ_S else 1,
+                    -float(r.get("score") or 0),
+                ),
+            )
+
         target = None
+        diversity_blocked = 0
         for r in free:
+            left = _reject_cooldown_active(r["pair"], now)
+            if left is not None:
+                _log(
+                    {
+                        "event": "skip_reject_cooldown",
+                        "pair": r["pair"],
+                        "direction": r["direction"],
+                        "cooldown_left_s": round(left, 1),
+                        "diversity_share": cur_div.get("share"),
+                        "diversity_floor": cur_div.get("floor"),
+                        "n": cur_div.get("n"),
+                    }
+                )
+                continue
+            pair_age = _bars_age_min(r["pair"])
+            if pair_age is None or pair_age > BAR_MAX_AGE_MIN * 3:
+                _log(
+                    {
+                        "event": "skip_pair_bars_stale",
+                        "pair": r["pair"],
+                        "bars_age_min": None if pair_age is None else round(pair_age, 1),
+                        "diversity_share": cur_div.get("share"),
+                        "diversity_floor": cur_div.get("floor"),
+                        "n": cur_div.get("n"),
+                    }
+                )
+                continue
+            allow, _cur, proj = fleet_hf_diversity.diversity_guard_allows(
+                subs,
+                r,
+                now,
+                margin=DIVERSITY_MARGIN,
+                guard_min_n=DIVERSITY_GUARD_MIN_N,
+                enabled=DIVERSITY_GUARD,
+            )
+            if not allow:
+                diversity_blocked += 1
+                _log(
+                    {
+                        "event": "skip_diversity_guard",
+                        "pair": r["pair"],
+                        "direction": r["direction"],
+                        "horizon_s": r.get("horizon_s"),
+                        "edge": r.get("edge"),
+                        "minority_relief": bool(r.get("minority_relief")),
+                        "diversity_share": proj.get("share"),
+                        "diversity_floor": proj.get("floor"),
+                        "diversity_target": float(proj.get("floor") or 0)
+                        + DIVERSITY_MARGIN,
+                        "n": proj.get("n"),
+                    }
+                )
+                continue
             if not _try_claim(
                 r["pair"],
                 r["direction"],
@@ -759,10 +922,14 @@ def run(
                         "event": "claim_busy",
                         "pair": r["pair"],
                         "direction": r["direction"],
+                        "diversity_share": proj.get("share"),
+                        "diversity_floor": proj.get("floor"),
+                        "n": proj.get("n"),
                     }
                 )
                 continue
             target = r
+            target["_div_proj"] = proj
             break
 
         if target is None:
@@ -771,6 +938,9 @@ def run(
                 poll_s,
                 (
                     f"wait_quality n_ranked={len(ranked)} n_quality={len(quality)} "
+                    f"div_blocked={diversity_blocked} "
+                    f"share={cur_div.get('share')} floor={cur_div.get('floor')} "
+                    f"n={cur_div.get('n')} "
                     f"board_best={board_best:.3f} "
                     f"top={top['pair']+':'+top['direction'] if top else '-'} "
                     f"lf_locked={sorted(lf_locked)[:4]} own_open={sorted(own_open)[:4]}"
@@ -779,6 +949,7 @@ def run(
             continue
 
         pair, direction = target["pair"], target["direction"]
+        proj = target.get("_div_proj") or {}
         _log(
             {
                 "event": "submit_attempt",
@@ -789,8 +960,13 @@ def run(
                 "vol_band_short": round(target["vol_band_short"], 3),
                 "tp_bps": target["tp_bps"],
                 "horizon_s": target["horizon_s"],
+                "edge": target.get("edge"),
+                "minority_relief": bool(target.get("minority_relief")),
                 "pick_rank": pick_rank,
                 "n_today": len(today),
+                "diversity_share": proj.get("share", cur_div.get("share")),
+                "diversity_floor": proj.get("floor", cur_div.get("floor")),
+                "n": proj.get("n", cur_div.get("n")),
             }
         )
         try:
@@ -847,7 +1023,9 @@ def run(
             _sleep(MIN_GAP_S, "post_hf_submit")
         elif kind == "hf.reject":
             # Explicit rejection — call did not land. Free claim; no daily burn.
+            reason = resp.get("reason") or resp.get("error")
             _release_claim(pair, direction, hotkey=hk)
+            _set_reject_cooldown(pair, time.time(), str(reason) if reason else None)
             _log(
                 {
                     "event": "submit_fail",
@@ -858,7 +1036,11 @@ def run(
                     "score": target["score"],
                     "receipt_kind": kind,
                     "seq": resp.get("seq"),
-                    "error": resp.get("error") or resp.get("reason"),
+                    "error": reason,
+                    "reject_cooldown_s": REJECT_COOLDOWN_S,
+                    "diversity_share": proj.get("share", cur_div.get("share")),
+                    "diversity_floor": proj.get("floor", cur_div.get("floor")),
+                    "n": proj.get("n", cur_div.get("n")),
                 }
             )
             st = _load_state()
@@ -868,10 +1050,10 @@ def run(
                 "ts": time.time(),
                 "ok": False,
                 "rejected": True,
-                "reason": resp.get("reason") or resp.get("error"),
+                "reason": reason,
             }
             _save_state(st)
-            _sleep(max(poll_s, 60.0), "hf_reject_backoff")
+            _sleep(max(poll_s, min(REJECT_COOLDOWN_S, 120.0)), "hf_reject_backoff")
         else:
             # Unknown response shape — treat as ambiguous.
             _log(
