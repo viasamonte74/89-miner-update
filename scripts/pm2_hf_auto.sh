@@ -28,6 +28,9 @@ _OV_MODE="${SN89_HF_DIVERSITY_GUARD_MODE:-}"
 _OV_LIVE="${SN89_HF_LIVE_QUOTES:-}"
 _OV_OPP="${SN89_HF_BLOCK_SIBLING_OPPOSITE:-}"
 _OV_MAXH="${SN89_HF_MAX_HORIZON_S:-}"
+_OV_MAXDAY="${SN89_HF_MAX_PER_DAY:-}"
+_OV_MAXPAIR="${SN89_HF_MAX_PER_PAIR_PER_DAY:-}"
+_OV_GAP="${SN89_HF_MIN_GAP_S:-}"
 
 set -a
 # shellcheck disable=SC1091
@@ -54,6 +57,9 @@ set +a
 [[ -n "$_OV_LIVE" ]] && export SN89_HF_LIVE_QUOTES="$_OV_LIVE"
 [[ -n "$_OV_OPP" ]] && export SN89_HF_BLOCK_SIBLING_OPPOSITE="$_OV_OPP"
 [[ -n "$_OV_MAXH" ]] && export SN89_HF_MAX_HORIZON_S="$_OV_MAXH"
+[[ -n "$_OV_MAXDAY" ]] && export SN89_HF_MAX_PER_DAY="$_OV_MAXDAY"
+[[ -n "$_OV_MAXPAIR" ]] && export SN89_HF_MAX_PER_PAIR_PER_DAY="$_OV_MAXPAIR"
+[[ -n "$_OV_GAP" ]] && export SN89_HF_MIN_GAP_S="$_OV_GAP"
 
 export PYTHONPATH="$SN89_REPO"
 export SN89_DATA_ROOT
