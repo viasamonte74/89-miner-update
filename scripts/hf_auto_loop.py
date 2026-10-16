@@ -219,10 +219,11 @@ def _live_pairs_from_log(
     by_pair_only: bool,
     live_s: float | None = None,
 ) -> set:
-    """Pairs (or pair,dir) still within lock window from submit_ok lines.
+    """Pairs (or pair,dir) still live from submit_ok / submit_ambiguous lines.
 
-    ``live_s`` overrides horizon. When omitted, uses max(horizon, PAIR_LOCK_S)
-    so an 8h default horizon cannot unlock a pair before the 24h validator lock.
+    Default hold is the call's own horizon (open-position gate). Pass
+    ``live_s=PAIR_LOCK_S`` only for cross-mechanism LF↔HF locking — same-board
+    HF repeats are NOT 24h-locked (see test_same_mechanism_repeat_is_not_CROSS_locked).
     """
     live: set = set()
     if not path.exists():
@@ -236,7 +237,8 @@ def _live_pairs_from_log(
             o = json.loads(line)
         except json.JSONDecodeError:
             continue
-        # Count confirmed ok and ambiguous attempts (commit may have landed).
+        # Confirmed ok + ambiguous (exception/timeout — may have landed).
+        # Explicit submit_fail / hf.reject must NOT appear here.
         ev = o.get("event")
         if ev not in {"submit_ok", "submit_ambiguous"}:
             continue
@@ -246,8 +248,7 @@ def _live_pairs_from_log(
         if live_s is not None:
             hold = float(live_s)
         else:
-            hz = float(o.get("horizon_s") or 8 * 3600)
-            hold = max(hz, PAIR_LOCK_S)
+            hold = float(o.get("horizon_s") or 8 * 3600)
         if now - ts > hold:
             continue
         pair = (o.get("pair") or "").upper()
@@ -262,12 +263,12 @@ def _live_pairs_from_log(
 
 
 def _lf_locked_pairs_for_hotkey(now: float) -> set[str]:
-    """Pairs this hotkey must not HF (24h cross-mechanism lock + open LF).
+    """Pairs this hotkey must not HF: 24h cross-mechanism lock vs own LF only.
 
-    Only this process's LF submit log counts — sibling LF positions do not lock us.
+    Sibling LF does not lock us. Same-mechanism HF open positions are handled
+    separately via ``_own_open_pairs`` (horizon, not 24h).
     """
     locked = _live_pairs_from_log(LF_LOG, now, by_pair_only=True, live_s=PAIR_LOCK_S)
-    locked |= _live_pairs_from_log(LF_LOG, now, by_pair_only=True)
     if LF_CLAIM_DIR.exists():
         try:
             our_lf = str(LF_LOG.resolve())
@@ -286,11 +287,9 @@ def _lf_locked_pairs_for_hotkey(now: float) -> set[str]:
     return {p for p in locked if p}
 
 
-def _own_locked_pairs(now: float) -> set[str]:
-    """Own HF pairs still under validator pair lock or open horizon."""
-    locked = _live_pairs_from_log(LOG, now, by_pair_only=True, live_s=PAIR_LOCK_S)
-    locked |= _live_pairs_from_log(LOG, now, by_pair_only=True)
-    return locked
+def _own_open_pairs(now: float) -> set[str]:
+    """Own HF pairs with a still-open call (horizon only — not 24h pair lock)."""
+    return _live_pairs_from_log(LOG, now, by_pair_only=True)
 
 
 def _dir_counts_from_log(path: Path, now: float, window_s: float) -> dict[str, list[int]]:
@@ -343,6 +342,11 @@ def _prefer_minority_side(ranked: list[dict], now: float) -> list[dict]:
 
 
 def _hf_sibling_live(now: float) -> set[tuple[str, str]]:
+    """Fleet race control while a sibling HF call is still open (horizon).
+
+    HF has no validator copy-mark, so we must NOT stretch this to 24h — only
+    open positions + short-lived claim files. Claims already use horizon_s.
+    """
     live: set[tuple[str, str]] = set()
     for path in _sibling_hf_logs():
         live |= _live_pairs_from_log(path, now, by_pair_only=False)  # type: ignore
@@ -362,6 +366,22 @@ def _hf_sibling_live(now: float) -> set[tuple[str, str]]:
             if pair and direction:
                 live.add((str(pair).upper(), str(direction).upper()))
     return live
+
+
+def _release_claim(pair: str, direction: str, *, hotkey: str) -> None:
+    key = f"{pair.upper()}_{direction.upper()}"
+    path = CLAIM_DIR / f"{key}.json"
+    if not path.exists():
+        return
+    try:
+        o = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    if o.get("hotkey") == hotkey:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _try_claim(pair: str, direction: str, *, hotkey: str, now: float, horizon_s: float) -> bool:
@@ -689,8 +709,8 @@ def run(
             continue
 
         lf_locked = _lf_locked_pairs_for_hotkey(now)
-        # Own pairs under 24h pair lock or still-open horizon (not horizon-only).
-        own_open = _own_locked_pairs(now)
+        # Own open HF only (horizon). 24h lock is LF↔HF via lf_locked, not HF→HF.
+        own_open = _own_open_pairs(now)
         sibling = _hf_sibling_live(now)
         blocked_pd = set(sibling)
         for p in lf_locked | own_open:
@@ -776,7 +796,7 @@ def run(
         try:
             resp = submit_hf(w, pair, direction)
         except Exception as e:  # noqa: BLE001
-            # Ambiguous: ingest may have accepted. Hold pair lock + min gap.
+            # Ambiguous: timeout / transport — ingest may have accepted.
             _log(
                 {
                     "event": "submit_ambiguous",
@@ -800,7 +820,8 @@ def run(
             _sleep(MIN_GAP_S, "hf_submit_ambiguous_gap")
             continue
 
-        ok = resp.get("kind") == "hf.receipt" and resp.get("verified", True)
+        kind = resp.get("kind")
+        ok = kind == "hf.receipt" and resp.get("verified", True)
         if ok:
             _log(
                 {
@@ -811,7 +832,7 @@ def run(
                     "horizon_s": target["horizon_s"],
                     "score": target["score"],
                     "vol_band": target["vol_band"],
-                    "receipt_kind": resp.get("kind"),
+                    "receipt_kind": kind,
                     "seq": resp.get("seq"),
                 }
             )
@@ -824,8 +845,35 @@ def run(
             }
             _save_state(st)
             _sleep(MIN_GAP_S, "post_hf_submit")
+        elif kind == "hf.reject":
+            # Explicit rejection — call did not land. Free claim; no daily burn.
+            _release_claim(pair, direction, hotkey=hk)
+            _log(
+                {
+                    "event": "submit_fail",
+                    "ok": False,
+                    "pair": pair,
+                    "direction": direction,
+                    "horizon_s": target["horizon_s"],
+                    "score": target["score"],
+                    "receipt_kind": kind,
+                    "seq": resp.get("seq"),
+                    "error": resp.get("error") or resp.get("reason"),
+                }
+            )
+            st = _load_state()
+            st["last_submit"] = {
+                "pair": pair,
+                "direction": direction,
+                "ts": time.time(),
+                "ok": False,
+                "rejected": True,
+                "reason": resp.get("reason") or resp.get("error"),
+            }
+            _save_state(st)
+            _sleep(max(poll_s, 60.0), "hf_reject_backoff")
         else:
-            # Fail responses can still mean the call landed — treat as lock+gap.
+            # Unknown response shape — treat as ambiguous.
             _log(
                 {
                     "event": "submit_ambiguous",
@@ -834,7 +882,7 @@ def run(
                     "direction": direction,
                     "horizon_s": target["horizon_s"],
                     "score": target["score"],
-                    "receipt_kind": resp.get("kind"),
+                    "receipt_kind": kind,
                     "seq": resp.get("seq"),
                     "error": resp.get("error") or resp.get("reason"),
                 }

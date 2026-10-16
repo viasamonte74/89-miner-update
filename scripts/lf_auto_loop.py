@@ -240,9 +240,10 @@ def _live_pairs_from_submit_log(
             if now - ts > live_s:
                 continue
         else:
+            # Open-position / sibling window only. Cross-mech 24h lock uses
+            # live_s=PAIR_LOCK_S at the call site — do not bake it into default.
             hz = float(o.get("horizon_s") or 8 * 3600)
-            # Honor validator 24h pair lock even when horizon defaults to 8h.
-            if now - ts > max(hz, PAIR_LOCK_S):
+            if now - ts > hz:
                 continue
         pair = (o.get("pair") or "").upper()
         direction = (o.get("direction") or "").upper()
