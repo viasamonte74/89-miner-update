@@ -38,10 +38,13 @@ _OV_BARAGE="${SN89_HF_BAR_MAX_AGE_MIN:-}"
 _OV_BARHARD="${SN89_HF_BAR_HARD_MAX_AGE_MIN:-}"
 _OV_FADEMIN="${SN89_HF_FADE_SPIKE_MIN:-}"
 _OV_FADEZ="${SN89_HF_FADE_SPIKE_Z:-}"
+_OV_PRIORS="${SN89_FLEET_PRIORS_MODE:-}"
 
 set -a
 # shellcheck disable=SC1091
 source "$SN89_DATA_ROOT/miner.env"
+# shellcheck disable=SC1091
+[[ -f "$SN89_DATA_ROOT/secrets.env" ]] && source "$SN89_DATA_ROOT/secrets.env"
 set +a
 
 # Re-apply overrides (non-empty launcher values win)
@@ -74,6 +77,7 @@ set +a
 [[ -n "$_OV_BARHARD" ]] && export SN89_HF_BAR_HARD_MAX_AGE_MIN="$_OV_BARHARD"
 [[ -n "$_OV_FADEMIN" ]] && export SN89_HF_FADE_SPIKE_MIN="$_OV_FADEMIN"
 [[ -n "$_OV_FADEZ" ]] && export SN89_HF_FADE_SPIKE_Z="$_OV_FADEZ"
+[[ -n "$_OV_PRIORS" ]] && export SN89_FLEET_PRIORS_MODE="$_OV_PRIORS"
 
 export PYTHONPATH="$SN89_REPO"
 export SN89_DATA_ROOT

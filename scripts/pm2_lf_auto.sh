@@ -21,12 +21,16 @@ _OV_STRICT="${SN89_STRICT_MODE:-}"
 _OV_PREF="${SN89_STRICT_PREFER_SHORT:-}"
 _OV_QF="${SN89_LF_QUALITY_FLOOR:-}"
 _OV_WASH="${SN89_LF_WASH_AVOID:-}"
+_OV_QONLY="${SN89_LF_QUALITY_ONLY:-}"
+_OV_PRIORS="${SN89_FLEET_PRIORS_MODE:-}"
 _OV_STATE_DIR="${SN89_STATE_DIR:-}"
 _OV_FLEET="${SN89_FLEET_HOTKEYS:-}"
 
 set -a
 # shellcheck disable=SC1091
 source "$SN89_DATA_ROOT/miner.env"
+# shellcheck disable=SC1091
+[[ -f "$SN89_DATA_ROOT/secrets.env" ]] && source "$SN89_DATA_ROOT/secrets.env"
 # shellcheck disable=SC1091
 [[ -f "$SN89_DATA_ROOT/fleet_hotkeys.env" ]] && source "$SN89_DATA_ROOT/fleet_hotkeys.env"
 set +a
@@ -45,6 +49,8 @@ set +a
 [[ -n "$_OV_PREF" ]] && export SN89_STRICT_PREFER_SHORT="$_OV_PREF"
 [[ -n "$_OV_QF" ]] && export SN89_LF_QUALITY_FLOOR="$_OV_QF"
 [[ -n "$_OV_WASH" ]] && export SN89_LF_WASH_AVOID="$_OV_WASH"
+[[ -n "$_OV_QONLY" ]] && export SN89_LF_QUALITY_ONLY="$_OV_QONLY"
+[[ -n "$_OV_PRIORS" ]] && export SN89_FLEET_PRIORS_MODE="$_OV_PRIORS"
 [[ -n "$_OV_STATE_DIR" ]] && export SN89_STATE_DIR="$_OV_STATE_DIR"
 [[ -n "$_OV_FLEET" ]] && export SN89_FLEET_HOTKEYS="$_OV_FLEET"
 

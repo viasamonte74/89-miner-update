@@ -35,7 +35,6 @@ import bittensor as bt
 
 from miner_ext.backtest.baselines import (
     first_passage_p_long,
-    momentum_score,
     realized_stats,
 )
 from miner_ext.data.paths import DATA_ROOT
@@ -148,8 +147,8 @@ ALLOW_MINORITY_EDGE = os.environ.get("SN89_HF_ALLOW_MINORITY_EDGE", "0").strip()
     "false",
     "False",
 )
-# Direction: legacy = FP drift + momentum (trend); fade_spike = fade ≥Zσ W-minute move.
-DIR_MODE = os.environ.get("SN89_HF_DIR_MODE", "legacy").strip().lower()
+# Direction: legacy = FP drift only; fade_spike = fade ≥Zσ W-minute move (default).
+DIR_MODE = os.environ.get("SN89_HF_DIR_MODE", "fade_spike").strip().lower()
 FADE_SPIKE_MIN = int(os.environ.get("SN89_HF_FADE_SPIKE_MIN", "5"))
 FADE_SPIKE_Z = float(os.environ.get("SN89_HF_FADE_SPIKE_Z", "2.0"))
 FADE_SIG_LOOKBACK = int(os.environ.get("SN89_HF_FADE_SIG_LOOKBACK", "60"))
@@ -178,7 +177,7 @@ _SESSION_RAW = os.environ.get("SN89_HF_SESSION_UTC", "").strip()
 DEFAULT_PAIRS = [
     x.strip().upper()
     for x in os.environ.get(
-        "SN89_HF_AUTO_PAIRS", "SUIUSD,ALGOUSD,ADAUSD,KPEPEUSD,NEARUSD"
+        "SN89_HF_AUTO_PAIRS", "SUIUSD,ALGOUSD,ADAUSD,KPEPEUSD,NEARUSD,ZROUSD"
     ).split(",")
     if x.strip()
 ]
@@ -749,10 +748,8 @@ def score_hf(
     if bands is None:
         return None
     mu, sig, _sig_s, vol_band, vol_band_short = bands
-    lookback = max(60, min(720, int(horizon_s // 60) * 4))
-    mom = momentum_score(t_ms, close, decision_ms, lag_min=min(30, lookback // 2))
-    if mom is None:
-        return None
+    # Momentum / trend term deliberately omitted: wrong sign at 30m HF
+    # (fade backtest ~52% vs trend-follow ~49%).
 
     if DIR_MODE == "fade_spike":
         fade = hf_fade_spike.fade_direction(
@@ -772,6 +769,9 @@ def score_hf(
         recent_w = max(0.15, min(1.6, vol_band_short / 0.7))
         hz_bonus = 1.08 if horizon_s <= PREFER_HZ_S else 1.0
         score = (0.45 + 0.28 * min(abs_z, 8.0)) * decisive_w * recent_w * hz_bonus
+        # Priors only when SN89_FLEET_PRIORS_MODE≠off (default off).
+        score *= fleet_priors.hf_pair_dir_mult(pair, direction)
+        score *= fleet_priors.hf_hour_mult(now)
         minority = False
         if subs is not None:
             minority = fleet_hf_diversity.is_minority_side(subs, pair, direction, now)
@@ -784,7 +784,7 @@ def score_hf(
             "vol_band_short": float(vol_band_short),
             "tp_bps": float(tp_bps),
             "horizon_s": int(horizon_s),
-            "mom": float(mom),
+            "mom": 0.0,
             "abs_z": abs_z,
             "spike_z": float(fade["z"]),
             "dir_mode": "fade_spike",
@@ -796,10 +796,8 @@ def score_hf(
     fp = first_passage_p_long(mu, sig, tp_bps)
     if direction == "LONG":
         edge = float(fp - 0.5)
-        mom_term = max(0.0, float(mom) * 100.0)
     else:
         edge = float(0.5 - fp)
-        mom_term = max(0.0, -float(mom) * 100.0)
     minority = False
     if subs is not None:
         minority = fleet_hf_diversity.is_minority_side(subs, pair, direction, now)
@@ -821,7 +819,8 @@ def score_hf(
     hz_bonus = 1.08 if horizon_s <= PREFER_HZ_S else 1.0
     edge_for_score = max(edge, 0.0) if minority_relief else edge
     edge_term = 0.35 + 1.4 * min(edge_for_score, 0.25)
-    score = edge_term * decisive_w * recent_w * hz_bonus + 0.06 * mom_term
+    # No mom_term — trend bonus was anti-predictive at HF horizons.
+    score = edge_term * decisive_w * recent_w * hz_bonus
     if minority_relief:
         score *= 0.55  # prefer real-edge setups when both pass the guard
     score *= fleet_priors.hf_pair_dir_mult(pair, direction)
@@ -835,7 +834,7 @@ def score_hf(
         "vol_band_short": float(vol_band_short),
         "tp_bps": float(tp_bps),
         "horizon_s": int(horizon_s),
-        "mom": float(mom),
+        "mom": 0.0,
         "dir_mode": "legacy",
         "minority_relief": bool(minority_relief),
         "is_minority": bool(minority),
@@ -958,7 +957,12 @@ def run(
                 if fleet_priors.stats_age_hours() is None
                 else round(fleet_priors.stats_age_hours() or 0, 2)
             ),
-            "hf_deny": sorted(f"{p}:{d}" for p, d in fleet_priors.HF_PAIR_DIR_DENY),
+            "priors_mode": fleet_priors.PRIORS_MODE,
+            "hf_deny": (
+                sorted(f"{p}:{d}" for p, d in fleet_priors.HF_PAIR_DIR_DENY)
+                if fleet_priors.PRIORS_MODE == "legacy"
+                else []
+            ),
             "bars_age_min": round(_bars_age_min(pairs[0]) or -1, 1) if pairs else -1,
         }
     )

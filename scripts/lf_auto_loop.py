@@ -33,7 +33,6 @@ import bittensor as bt
 
 from miner_ext.backtest.baselines import (
     first_passage_p_long,
-    momentum_score,
     realized_stats,
 )
 from miner_ext.data.paths import DATA_ROOT
@@ -117,6 +116,13 @@ SKIP_WEAK_EOD = os.environ.get("SN89_AUTO_SKIP_WEAK_EOD", "1").strip() not in (
     "false",
     "False",
 )
+# Quality-only: never force fills via finalize / eod_force / catch_up.
+# 0–1 LF calls/day is fine — forced ~50% slots only add Wilson noise.
+QUALITY_ONLY = os.environ.get("SN89_LF_QUALITY_ONLY", "1").strip() not in (
+    "0",
+    "false",
+    "False",
+)
 # Strict qualify mode: optional proven-pair filter + higher early score.
 # SHORT-only bias defaults OFF — h2/h3 ran 4W/15L under prefer-short.
 STRICT_MODE = os.environ.get("SN89_STRICT_MODE", "0").strip() not in (
@@ -176,9 +182,11 @@ _PAIR_SCORE_MULT = {
     "ENAUSD": 1.08,
     "KPEPEUSD": 1.00,
 }
-# Fleet empirical overlay (AVAX toxic on our LF, etc.)
-for _p, _m in fleet_priors.LF_PAIR_MULT.items():
-    _PAIR_SCORE_MULT[_p] = float(_m)
+# Fleet empirical overlay only in legacy priors mode (noisy small-n bans/boosts).
+if fleet_priors.PRIORS_MODE == "legacy":
+    for _p, _m in fleet_priors.LF_PAIR_MULT.items():
+        _PAIR_SCORE_MULT[_p] = float(_m)
+# Keep explicit env BTC/ETH soft-down regardless (wash control, not HR prior).
 if "SN89_AUTO_BTC_MULT" in os.environ:
     _PAIR_SCORE_MULT["BTCUSD"] = float(os.environ["SN89_AUTO_BTC_MULT"])
 if "SN89_AUTO_ETH_MULT" in os.environ:
@@ -756,10 +764,9 @@ def score_candidate(
         cache[pair] = series
     t_ms, close = cache[pair]
     decision_ms = int(now * 1000)
-    mom = momentum_score(t_ms, close, decision_ms, lag_min=60)
     stats = realized_stats(t_ms, close, decision_ms, lookback_min=1440)
     stats_2h = realized_stats(t_ms, close, decision_ms, lookback_min=120)
-    if mom is None or stats is None or stats_2h is None:
+    if stats is None or stats_2h is None:
         return None
     _, mu, sig = stats
     _, _, sig_2h = stats_2h
@@ -776,17 +783,16 @@ def score_candidate(
 
     if direction == "LONG":
         edge = float(fp - 0.5)
-        mom_term = max(0.0, float(mom) * 100.0)
     else:
         edge = float(0.5 - fp)
-        mom_term = max(0.0, -float(mom) * 100.0)
 
     if edge <= 0.0:
         return None  # never submit against the drift edge
 
-    # Cap edge: large edge without vol was anti-predictive for decisive in study
+    # Cap edge: large edge without vol was anti-predictive for decisive in study.
+    # No mom_term — trend bonus is the wrong sign; LF rules flip halves anyway.
     edge_term = 0.40 + 1.5 * min(edge, 0.22)
-    score = edge_term * decisive_w * recent_w + 0.08 * mom_term
+    score = edge_term * decisive_w * recent_w
     if LF_QUALITY_FLOOR > 0 and score < LF_QUALITY_FLOOR:
         return None
     score *= _PAIR_SCORE_MULT.get(pair, 1.0)
@@ -798,7 +804,7 @@ def score_candidate(
         "direction": direction,
         "score": float(score),
         "fp_p_long": float(fp),
-        "mom_60": float(mom),
+        "mom_60": 0.0,
         "edge": float(edge),
         "vol_band": float(vol_band),
         "vol_band_2h": float(vol_band_2h),
@@ -968,9 +974,19 @@ def run(
             "pair_lock_s": PAIR_LOCK_S,
             "max_same_dir_per_day": MAX_SAME_DIR_PER_DAY,
             "skip_weak_eod": SKIP_WEAK_EOD,
+            "quality_only": QUALITY_ONLY,
             "fleet_priors": fleet_priors.load_stats_note(),
-            "lf_deny_pairs": sorted(fleet_priors.LF_PAIR_DENY),
-            "lf_hard_avoid_hours": sorted(fleet_priors.LF_HARD_AVOID_HOURS),
+            "priors_mode": fleet_priors.PRIORS_MODE,
+            "lf_deny_pairs": (
+                sorted(fleet_priors.LF_PAIR_DENY)
+                if fleet_priors.PRIORS_MODE == "legacy"
+                else []
+            ),
+            "lf_hard_avoid_hours": (
+                sorted(fleet_priors.LF_HARD_AVOID_HOURS)
+                if fleet_priors.PRIORS_MODE == "legacy"
+                else []
+            ),
             "claim_dir": str(CLAIM_DIR),
             "finalize_stagger_s": FINALIZE_STAGGER_S,
             "btc_mult": _PAIR_SCORE_MULT.get("BTCUSD", 1.0),
@@ -1105,16 +1121,24 @@ def run(
             _sleep(_seconds_until_next_utc_day(now), "no_slots_left")
             continue
 
-        eod_force = to_day_end <= slots_left * (float(gap or 3600) + 120.0)
         missed = [i for i in range(window) if i not in filled]
-        catch_up = bool(missed) and slots_left > 0
+        # Quality-only (default): never force slot fills. Forced ~50% LF only
+        # adds wash noise to the Wilson bound.
+        if QUALITY_ONLY:
+            eod_force = False
+            catch_up = False
+            finalize = False
+        else:
+            eod_force = to_day_end <= slots_left * (float(gap or 3600) + 120.0)
+            catch_up = bool(missed) and slots_left > 0
+            finalize = False  # set below after we know window timing
         # already filled this window and not catching up / EOD → wait
         if window in filled and not catch_up and not eod_force:
             _sleep(min(poll_s, max(5.0, to_w_end)), "window_already_filled")
             continue
 
-        # Hard UTC hour denylist (fleet book) — skip rather than wash.
-        if fleet_priors.utc_hour(now) in fleet_priors.LF_HARD_AVOID_HOURS:
+        # Hour bans only when priors mode enables them (default off).
+        if fleet_priors.lf_hour_blocked(now, score=0.0, score_floor=early_score):
             _sleep(min(poll_s, 600.0), f"lf_hour_blocked h={fleet_priors.utc_hour(now)}")
             continue
 
@@ -1140,7 +1164,8 @@ def run(
         )
         # Stagger finalize by pick_rank so h1 claims first, then h2, then h3.
         finalize_due = finalize_min * 60.0 + pick_rank * FINALIZE_STAGGER_S
-        finalize = (window not in filled) and (to_w_end <= finalize_due)
+        if not QUALITY_ONLY:
+            finalize = (window not in filled) and (to_w_end <= finalize_due)
 
         if not (early_time or finalize or eod_force or catch_up):
             _sleep(
@@ -1149,7 +1174,12 @@ def run(
                     f"wait_better window={window} score={watch['score']:.3f} "
                     f"vol_band={vol_band:.2f} elapsed={elapsed_min:.0f}m "
                     f"need_score>={early_score} vol>={min_vol_band_early} "
-                    f"elapsed>={early_min_elapsed_min}m or finalize<{finalize_due/60:.0f}m"
+                    f"elapsed>={early_min_elapsed_min}m"
+                    + (
+                        " quality_only"
+                        if QUALITY_ONLY
+                        else f" or finalize<{finalize_due/60:.0f}m"
+                    )
                 ),
             )
             continue
@@ -1165,14 +1195,14 @@ def run(
             )
 
         # Cascade + exclusive fleet claim: never submit a live sibling (pair,dir).
-        # Weak EOD/catch-up: only fire if candidate clears *early* gates (avoid wash burns).
+        # Quality-only: only the early (high-score) gate may fire.
         target = None
         early = False
         want_early = early_time
         phases: list[bool] = []
         if want_early:
             phases.append(True)
-        if finalize or eod_force or catch_up:
+        if (not QUALITY_ONLY) and (finalize or eod_force or catch_up):
             # Weak EOD/catch-up/finalize: require early-quality gates (fewer washes).
             use_early_gates = bool(SKIP_WEAK_EOD) or want_early
             if use_early_gates not in phases:

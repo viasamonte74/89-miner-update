@@ -1,0 +1,84 @@
+{
+  "generated_at": 1792150418.765721,
+  "pairs": [
+    "SUIUSD",
+    "ALGOUSD",
+    "ADAUSD",
+    "KPEPEUSD",
+    "NEARUSD",
+    "ZROUSD",
+    "TAOUSD",
+    "ARBUSD"
+  ],
+  "rules": {
+    "trend_2h": {
+      "full": {
+        "n_decided": 12210,
+        "wins": 6043,
+        "losses": 6167,
+        "hit_rate": 0.4949221949221949,
+        "wilson_lb": 0.4860567749747787
+      },
+      "half1": {
+        "n_decided": 6105,
+        "wins": 2989,
+        "losses": 3116,
+        "hit_rate": 0.4895986895986896,
+        "wilson_lb": 0.47706941157844296
+      },
+      "half2": {
+        "n_decided": 6105,
+        "wins": 3054,
+        "losses": 3051,
+        "hit_rate": 0.5002457002457003,
+        "wilson_lb": 0.4877070166643448
+      }
+    },
+    "always_long": {
+      "full": {
+        "n_decided": 12225,
+        "wins": 6186,
+        "losses": 6039,
+        "hit_rate": 0.5060122699386503,
+        "wilson_lb": 0.4971489876482281
+      },
+      "half1": {
+        "n_decided": 6112,
+        "wins": 3151,
+        "losses": 2961,
+        "hit_rate": 0.5155431937172775,
+        "wilson_lb": 0.5030081300818038
+      },
+      "half2": {
+        "n_decided": 6113,
+        "wins": 3035,
+        "losses": 3078,
+        "hit_rate": 0.4964829052838214,
+        "wilson_lb": 0.48395509540488313
+      }
+    },
+    "fade_spike": {
+      "full": {
+        "n_decided": 783,
+        "wins": 403,
+        "losses": 380,
+        "hit_rate": 0.5146871008939975,
+        "wilson_lb": 0.4796936527765113
+      },
+      "half1": {
+        "n_decided": 391,
+        "wins": 192,
+        "losses": 199,
+        "hit_rate": 0.49104859335038364,
+        "wilson_lb": 0.44182447206452913
+      },
+      "half2": {
+        "n_decided": 392,
+        "wins": 211,
+        "losses": 181,
+        "hit_rate": 0.5382653061224489,
+        "wilson_lb": 0.48878029466968126
+      }
+    }
+  }
+}
