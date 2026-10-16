@@ -117,7 +117,8 @@ SKIP_WEAK_EOD = os.environ.get("SN89_AUTO_SKIP_WEAK_EOD", "1").strip() not in (
     "false",
     "False",
 )
-# Strict qualify mode (h2/h3): only proven pairs + higher early score; prefer SHORT.
+# Strict qualify mode: optional proven-pair filter + higher early score.
+# SHORT-only bias defaults OFF — h2/h3 ran 4W/15L under prefer-short.
 STRICT_MODE = os.environ.get("SN89_STRICT_MODE", "0").strip() not in (
     "0",
     "false",
@@ -131,11 +132,28 @@ STRICT_LF_PAIRS = frozenset(
     x.strip().upper() for x in _STRICT_LF_PAIRS_RAW.split(",") if x.strip()
 )
 STRICT_EARLY_SCORE = float(os.environ.get("SN89_STRICT_EARLY_SCORE", "0.85"))
-STRICT_PREFER_SHORT = os.environ.get("SN89_STRICT_PREFER_SHORT", "1").strip() not in (
+STRICT_PREFER_SHORT = os.environ.get("SN89_STRICT_PREFER_SHORT", "0").strip() not in (
     "0",
     "false",
     "False",
 )
+# Quality floor that treats LONG/SHORT the same (replaces SHORT-only strict).
+LF_QUALITY_FLOOR = float(os.environ.get("SN89_LF_QUALITY_FLOOR", "0.0"))
+# Down-weight high-wash pairs (h1 washed heavily on BTCUSD). Env CSV of pairs.
+_LF_WASH_AVOID_RAW = os.environ.get("SN89_LF_WASH_AVOID_PAIRS", "BTCUSD")
+LF_WASH_AVOID_PAIRS = frozenset(
+    x.strip().upper() for x in _LF_WASH_AVOID_RAW.split(",") if x.strip()
+)
+LF_WASH_AVOID_MULT = float(os.environ.get("SN89_LF_WASH_AVOID_MULT", "0.35"))
+LF_WASH_AVOID = os.environ.get("SN89_LF_WASH_AVOID", "0").strip() not in (
+    "0",
+    "false",
+    "False",
+)
+BLOCK_SIBLING_OPPOSITE = os.environ.get(
+    "SN89_LF_BLOCK_SIBLING_OPPOSITE", "1"
+).strip() not in ("0", "false", "False")
+BAR_MAX_AGE_H = float(os.environ.get("SN89_LF_BAR_MAX_AGE_H", "3.0"))
 # Base priors (network / top-miner) then overlaid by fleet_priors (our book).
 _PAIR_SCORE_MULT = {
     "BTCUSD": float(os.environ.get("SN89_AUTO_BTC_MULT", "0.20")),
@@ -187,6 +205,17 @@ def _sibling_log_paths() -> list[Path]:
     return out
 
 
+def _expand_opposite(live: set[tuple[str, str]]) -> set[tuple[str, str]]:
+    """While a sibling holds a pair, block both directions (no cross-key hedge)."""
+    if not BLOCK_SIBLING_OPPOSITE:
+        return live
+    out = set(live)
+    for pair, _d in list(live):
+        out.add((pair, "LONG"))
+        out.add((pair, "SHORT"))
+    return out
+
+
 def _sibling_live_trades(now: float) -> set[tuple[str, str]]:
     """{(pair, direction)} still live on a sibling hotkey (local log heuristic)."""
     live: set[tuple[str, str]] = set()
@@ -212,7 +241,7 @@ def _sibling_live_trades(now: float) -> set[tuple[str, str]]:
             direction = o.get("direction")
             if pair and direction:
                 live.add((str(pair).upper(), str(direction).upper()))
-    return live
+    return _expand_opposite(live)
 
 
 def _live_pairs_from_submit_log(
@@ -307,7 +336,7 @@ def _fleet_claimed_trades(now: float, *, self_hotkey: str | None = None) -> set[
         direction = o.get("direction")
         if pair and direction:
             live.add((str(pair).upper(), str(direction).upper()))
-    return live
+    return _expand_opposite(live)
 
 
 def _fleet_ss58() -> set[str]:
@@ -653,10 +682,17 @@ def _sleep(sec: float, reason: str) -> None:
 
 
 def _bars_age_h(pair: str = "BTCUSD") -> float | None:
+    """Hours since last bar timestamp (not file mtime). None if missing/unreadable."""
     path = os.path.join(BARS_DIR, f"{pair}.parquet")
     if not os.path.isfile(path):
         return None
-    return (time.time() - os.path.getmtime(path)) / 3600.0
+    try:
+        t = pq.read_table(path, columns=["t"]).column("t").to_numpy()
+        if len(t) == 0:
+            return None
+        return (time.time() * 1000.0 - float(t[-1])) / 3_600_000.0
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def _refresh_bars(pairs: list[str]) -> None:
@@ -741,7 +777,11 @@ def score_candidate(
     # Cap edge: large edge without vol was anti-predictive for decisive in study
     edge_term = 0.40 + 1.5 * min(edge, 0.22)
     score = edge_term * decisive_w * recent_w + 0.08 * mom_term
+    if LF_QUALITY_FLOOR > 0 and score < LF_QUALITY_FLOOR:
+        return None
     score *= _PAIR_SCORE_MULT.get(pair, 1.0)
+    if LF_WASH_AVOID and pair.upper() in LF_WASH_AVOID_PAIRS:
+        score *= LF_WASH_AVOID_MULT
     score *= fleet_priors.lf_hour_mult(now)
     return {
         "pair": pair,
@@ -900,6 +940,10 @@ def run(
             "strict_mode": STRICT_MODE,
             "strict_lf_pairs": sorted(STRICT_LF_PAIRS) if STRICT_MODE else [],
             "strict_prefer_short": bool(STRICT_MODE and STRICT_PREFER_SHORT),
+            "lf_quality_floor": LF_QUALITY_FLOOR,
+            "lf_wash_avoid": LF_WASH_AVOID,
+            "lf_wash_avoid_pairs": sorted(LF_WASH_AVOID_PAIRS) if LF_WASH_AVOID else [],
+            "block_sibling_opposite": BLOCK_SIBLING_OPPOSITE,
             "direction": direction,
             "pairs": pairs,
             "poll_s": poll_s,
@@ -950,8 +994,11 @@ def run(
                 )
                 last_bar_refresh = now  # avoid tight error loop
             cache.clear()
-        if age_h is not None and age_h > 3.0:
-            _sleep(poll_s, f"bars_stale age_h={age_h:.2f}")
+        if age_h is None or age_h > BAR_MAX_AGE_H:
+            _sleep(
+                poll_s,
+                f"bars_stale_or_missing age_h={round(age_h, 2) if age_h is not None else None}",
+            )
             continue
 
         st = _ensure_day_state(st, now)
