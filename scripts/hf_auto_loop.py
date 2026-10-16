@@ -22,6 +22,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pyarrow.parquet as pq
@@ -46,6 +47,7 @@ if _SCRIPTS not in sys.path:
     sys.path.insert(0, _SCRIPTS)
 import fleet_hf_diversity  # noqa: E402
 import fleet_priors  # noqa: E402
+import hf_fade_spike  # noqa: E402
 import hf_live_quotes  # noqa: E402
 
 _STATE_DIR = Path(os.environ.get("SN89_STATE_DIR", os.path.expanduser("~/.sn89")))
@@ -64,13 +66,13 @@ LF_CLAIM_DIR = Path(
     os.environ.get("SN89_AUTO_CLAIM_DIR", "/workspace/sn89_data/fleet_claims")
 )
 
-# Eligibility needs ~50 / 8 trading days ≈ 6.3/day. Cap below protocol 30 and
-# space submits so we only fire when a high-quality setup is open.
-MAX_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_DAY", "10"))
+# Eligibility needs ~50 / 8 trading days ≈ 6.3/day. Protocol allows 30/day;
+# fade-spike fires ~10×/pair/day — raise via env after the fade path is live.
+MAX_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_DAY", "20"))
 # Cap concentration on one pair per UTC day (SUI dominated prior book).
-MAX_PER_PAIR_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_PAIR_PER_DAY", "3"))
-MIN_GAP_S = float(os.environ.get("SN89_HF_MIN_GAP_S", "3600"))  # 1h between fires
-POLL_S = float(os.environ.get("SN89_HF_POLL_S", "45"))
+MAX_PER_PAIR_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_PAIR_PER_DAY", "6"))
+MIN_GAP_S = float(os.environ.get("SN89_HF_MIN_GAP_S", "120"))  # polite; protocol ~250ms
+POLL_S = float(os.environ.get("SN89_HF_POLL_S", "30"))
 MIN_VOL_BAND = float(os.environ.get("SN89_HF_MIN_VOL_BAND", "1.30"))
 MIN_VOL_BAND_SHORT = float(os.environ.get("SN89_HF_MIN_VOL_BAND_SHORT", "0.75"))
 MIN_SCORE = float(os.environ.get("SN89_HF_MIN_SCORE", "1.00"))
@@ -124,8 +126,9 @@ STRICT_MIN_SCORE = float(os.environ.get("SN89_STRICT_MIN_SCORE", "1.25"))
 PAIR_LOCK_S = float(os.environ.get("SN89_PAIR_LOCK_S", str(hf_mod.PAIR_LOCK_S)))
 # Prefer faster 30m horizons when scoring equal
 PREFER_HZ_S = int(os.environ.get("SN89_HF_PREFER_HZ_S", "1800"))
-BAR_REFRESH_S = float(os.environ.get("SN89_HF_BAR_REFRESH_S", "300"))
-BAR_MAX_AGE_MIN = float(os.environ.get("SN89_HF_BAR_MAX_AGE_MIN", "5"))
+# Stale bars kill fade edge (~50.9% → 50.1% at +5m). Refresh ≤60s; live quotes fill gaps.
+BAR_REFRESH_S = float(os.environ.get("SN89_HF_BAR_REFRESH_S", "60"))
+BAR_MAX_AGE_MIN = float(os.environ.get("SN89_HF_BAR_MAX_AGE_MIN", "2"))
 # Diversity guard (P0): stay above floor+margin before n hits the hard gate.
 DIVERSITY_GUARD = os.environ.get("SN89_HF_DIVERSITY_GUARD", "1").strip() not in (
     "0",
@@ -136,11 +139,17 @@ DIVERSITY_MARGIN = float(os.environ.get("SN89_HF_DIVERSITY_MARGIN", "0.05"))
 DIVERSITY_GUARD_MIN_N = int(os.environ.get("SN89_HF_DIVERSITY_GUARD_MIN_N", "30"))
 DIVERSITY_GUARD_MODE = os.environ.get("SN89_HF_DIVERSITY_GUARD_MODE", "improve")
 MINORITY_EDGE_TOL = float(os.environ.get("SN89_HF_MINORITY_EDGE_TOL", "0.02"))
-ALLOW_MINORITY_EDGE = os.environ.get("SN89_HF_ALLOW_MINORITY_EDGE", "1").strip() not in (
+# Off by default: negative-edge "relief" trades hurt HR; fade is two-sided alone.
+ALLOW_MINORITY_EDGE = os.environ.get("SN89_HF_ALLOW_MINORITY_EDGE", "0").strip() not in (
     "0",
     "false",
     "False",
 )
+# Direction: legacy = FP drift + momentum (trend); fade_spike = fade ≥Zσ W-minute move.
+DIR_MODE = os.environ.get("SN89_HF_DIR_MODE", "legacy").strip().lower()
+FADE_SPIKE_MIN = int(os.environ.get("SN89_HF_FADE_SPIKE_MIN", "5"))
+FADE_SPIKE_Z = float(os.environ.get("SN89_HF_FADE_SPIKE_Z", "2.0"))
+FADE_SIG_LOOKBACK = int(os.environ.get("SN89_HF_FADE_SIG_LOOKBACK", "60"))
 DIVERSITY_PREFER_SHORT_HZ = os.environ.get(
     "SN89_HF_DIVERSITY_PREFER_SHORT_HZ", "1"
 ).strip() not in ("0", "false", "False")
@@ -553,6 +562,14 @@ def _passes_quality(
         return False
     if r["vol_band_short"] < MIN_VOL_BAND_SHORT:
         return False
+    # Fade-spike: direction gated by |z|; do not require FP drift edge / hour priors.
+    if r.get("dir_mode") == "fade_spike":
+        if float(r.get("abs_z") or 0) < FADE_SPIKE_Z:
+            return False
+        top_ratio = MIN_TOP_RATIO if pick_rank <= 0 else MIN_TOP_RATIO_OVERFLOW
+        if board_best > 0 and r["score"] < top_ratio * board_best:
+            return False
+        return True
     # Minority-relief rows may have edge in [-tol, MIN_EDGE); skip top-ratio cut
     # so the diversity guard can still select them.
     if r["edge"] < MIN_EDGE and not r.get("minority_relief"):
@@ -644,6 +661,50 @@ def _pair_counts_today(now: float) -> dict[str, int]:
     return counts
 
 
+def _series_for_score(
+    pair: str,
+    cache: dict,
+    *,
+    now: float,
+    live_quote: dict | None,
+) -> tuple[Any, Any, int] | None:
+    if pair not in cache:
+        series = _load_close(pair)
+        if series is None:
+            return None
+        cache[pair] = series
+    t_ms, close = cache[pair]
+    if live_quote:
+        t_ms, close = hf_live_quotes.append_live_to_series(t_ms, close, live_quote)
+        cache[pair] = (t_ms, close)
+        decision_ms = int(live_quote["t_ms"])
+    else:
+        decision_ms = int(now * 1000)
+    return t_ms, close, decision_ms
+
+
+def _vol_bands(
+    t_ms, close, decision_ms: int, *, horizon_s: int, tp_bps: float
+) -> tuple[float, float, float, float, float] | None:
+    lookback = max(60, min(720, int(horizon_s // 60) * 4))
+    stats = realized_stats(t_ms, close, decision_ms, lookback_min=lookback)
+    stats_short = realized_stats(
+        t_ms, close, decision_ms, lookback_min=max(30, int(horizon_s // 60))
+    )
+    if stats is None or stats_short is None:
+        return None
+    _, mu, sig = stats
+    _, _, sig_s = stats_short
+    if sig <= 0 or sig_s <= 0 or tp_bps <= 0:
+        return None
+    band_frac = tp_bps / 10_000.0
+    n_min = max(1.0, horizon_s / 60.0)
+    vol_band = float(sig) * (n_min ** 0.5) / band_frac
+    n_short = max(1.0, n_min / 4.0)
+    vol_band_short = float(sig_s) * (n_short ** 0.5) / band_frac
+    return float(mu), float(sig), float(sig_s), float(vol_band), float(vol_band_short)
+
+
 def score_hf(
     pair: str,
     direction: str,
@@ -657,36 +718,58 @@ def score_hf(
 ) -> dict | None:
     if fleet_priors.hf_pair_dir_blocked(pair, direction):
         return None
-    if pair not in cache:
-        series = _load_close(pair)
-        if series is None:
-            return None
-        cache[pair] = series
-    t_ms, close = cache[pair]
-    if live_quote:
-        t_ms, close = hf_live_quotes.append_live_to_series(t_ms, close, live_quote)
-        cache[pair] = (t_ms, close)
-        decision_ms = int(live_quote["t_ms"])
-    else:
-        decision_ms = int(now * 1000)
+    series = _series_for_score(pair, cache, now=now, live_quote=live_quote)
+    if series is None:
+        return None
+    t_ms, close, decision_ms = series
+    bands = _vol_bands(t_ms, close, decision_ms, horizon_s=horizon_s, tp_bps=tp_bps)
+    if bands is None:
+        return None
+    mu, sig, _sig_s, vol_band, vol_band_short = bands
     lookback = max(60, min(720, int(horizon_s // 60) * 4))
-    stats = realized_stats(t_ms, close, decision_ms, lookback_min=lookback)
-    stats_short = realized_stats(
-        t_ms, close, decision_ms, lookback_min=max(30, int(horizon_s // 60))
-    )
     mom = momentum_score(t_ms, close, decision_ms, lag_min=min(30, lookback // 2))
-    if stats is None or stats_short is None or mom is None:
+    if mom is None:
         return None
-    _, mu, sig = stats
-    _, _, sig_s = stats_short
-    if sig <= 0 or sig_s <= 0 or tp_bps <= 0:
-        return None
-    band_frac = tp_bps / 10_000.0
-    n_min = max(1.0, horizon_s / 60.0)
-    vol_band = float(sig) * (n_min ** 0.5) / band_frac
-    # recent ~1/4 horizon
-    n_short = max(1.0, n_min / 4.0)
-    vol_band_short = float(sig_s) * (n_short ** 0.5) / band_frac
+
+    if DIR_MODE == "fade_spike":
+        fade = hf_fade_spike.fade_direction(
+            t_ms,
+            close,
+            decision_ms,
+            window_min=FADE_SPIKE_MIN,
+            sig_lookback_min=FADE_SIG_LOOKBACK,
+            min_abs_z=FADE_SPIKE_Z,
+        )
+        if fade is None or fade["direction"] != direction:
+            return None
+        abs_z = float(fade["abs_z"])
+        # Synthetic edge so legacy MIN_EDGE logging stays meaningful (~2σ → 0.04).
+        edge = 0.02 * abs_z
+        decisive_w = max(0.15, min(1.6, vol_band / 1.0))
+        recent_w = max(0.15, min(1.6, vol_band_short / 0.7))
+        hz_bonus = 1.08 if horizon_s <= PREFER_HZ_S else 1.0
+        score = (0.45 + 0.28 * min(abs_z, 8.0)) * decisive_w * recent_w * hz_bonus
+        minority = False
+        if subs is not None:
+            minority = fleet_hf_diversity.is_minority_side(subs, pair, direction, now)
+        return {
+            "pair": pair,
+            "direction": direction,
+            "score": float(score),
+            "edge": float(edge),
+            "vol_band": float(vol_band),
+            "vol_band_short": float(vol_band_short),
+            "tp_bps": float(tp_bps),
+            "horizon_s": int(horizon_s),
+            "mom": float(mom),
+            "abs_z": abs_z,
+            "spike_z": float(fade["z"]),
+            "dir_mode": "fade_spike",
+            "minority_relief": False,
+            "is_minority": bool(minority),
+            "live_quote": bool(live_quote),
+        }
+
     fp = first_passage_p_long(mu, sig, tp_bps)
     if direction == "LONG":
         edge = float(fp - 0.5)
@@ -730,6 +813,7 @@ def score_hf(
         "tp_bps": float(tp_bps),
         "horizon_s": int(horizon_s),
         "mom": float(mom),
+        "dir_mode": "legacy",
         "minority_relief": bool(minority_relief),
         "is_minority": bool(minority),
         "live_quote": bool(live_quote),
@@ -756,7 +840,27 @@ def rank_hf(
         live = None
         if LIVE_QUOTES and wallet is not None:
             live = hf_live_quotes.fetch_live_price(pair, wallet=wallet)
-        for d in ("LONG", "SHORT"):
+        dirs: tuple[str, ...]
+        if DIR_MODE == "fade_spike":
+            # Resolve fade side once; avoid scoring the trend side.
+            series = _series_for_score(pair, cache, now=now, live_quote=live)
+            if series is None:
+                continue
+            t_ms, close, decision_ms = series
+            fade = hf_fade_spike.fade_direction(
+                t_ms,
+                close,
+                decision_ms,
+                window_min=FADE_SPIKE_MIN,
+                sig_lookback_min=FADE_SIG_LOOKBACK,
+                min_abs_z=FADE_SPIKE_Z,
+            )
+            if fade is None:
+                continue
+            dirs = (fade["direction"],)
+        else:
+            dirs = ("LONG", "SHORT")
+        for d in dirs:
             r = score_hf(
                 pair,
                 d,
@@ -813,6 +917,9 @@ def run(
             "diversity_guard_min_n": DIVERSITY_GUARD_MIN_N,
             "minority_edge_tol": MINORITY_EDGE_TOL,
             "allow_minority_edge": ALLOW_MINORITY_EDGE,
+            "dir_mode": DIR_MODE,
+            "fade_spike_min": FADE_SPIKE_MIN,
+            "fade_spike_z": FADE_SPIKE_Z,
             "reject_cooldown_s": REJECT_COOLDOWN_S,
             "block_sibling_opposite": BLOCK_SIBLING_OPPOSITE,
             "max_horizon_s": MAX_HORIZON_S,
@@ -821,10 +928,25 @@ def run(
             "sibling_logs": [str(p) for p in _sibling_hf_logs()],
             "lf_log": str(LF_LOG),
             "fleet_priors": fleet_priors.load_stats_note(),
+            "fleet_stats_stale": fleet_priors.stats_stale(),
+            "fleet_stats_age_h": (
+                None
+                if fleet_priors.stats_age_hours() is None
+                else round(fleet_priors.stats_age_hours() or 0, 2)
+            ),
             "hf_deny": sorted(f"{p}:{d}" for p, d in fleet_priors.HF_PAIR_DIR_DENY),
             "bars_age_min": round(_bars_age_min(pairs[0]) or -1, 1) if pairs else -1,
         }
     )
+    if fleet_priors.stats_stale():
+        _log(
+            {
+                "event": "fleet_stats_stale_alarm",
+                "age_h": fleet_priors.stats_age_hours(),
+                "path": str(fleet_priors.STATS_PATH),
+                "hint": "run scripts/refresh_fleet_pair_stats.sh",
+            }
+        )
 
     while True:
         if STOP.exists():
@@ -1043,12 +1165,16 @@ def run(
                 "tp_bps": target["tp_bps"],
                 "horizon_s": target["horizon_s"],
                 "edge": target.get("edge"),
+                "dir_mode": target.get("dir_mode") or DIR_MODE,
+                "abs_z": target.get("abs_z"),
+                "spike_z": target.get("spike_z"),
                 "minority_relief": bool(target.get("minority_relief")),
                 "pick_rank": pick_rank,
                 "n_today": len(today),
                 "diversity_share": proj.get("share", cur_div.get("share")),
                 "diversity_floor": proj.get("floor", cur_div.get("floor")),
                 "n": proj.get("n", cur_div.get("n")),
+                "live_quote": bool(target.get("live_quote")),
             }
         )
         try:

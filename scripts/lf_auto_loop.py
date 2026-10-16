@@ -1123,6 +1123,16 @@ def run(
             _sleep(poll_s, "no_scores_yet")
             continue
 
+        # Per-pair freshness (BTC age alone can miss a quiet alt book).
+        pair_age_h = _bars_age_h(str(watch.get("pair") or "BTCUSD"))
+        if pair_age_h is None or pair_age_h > BAR_MAX_AGE_H:
+            _sleep(
+                poll_s,
+                f"pair_bars_stale pair={watch.get('pair')} "
+                f"age_h={round(pair_age_h, 2) if pair_age_h is not None else None}",
+            )
+            continue
+
         vol_band = float(watch.get("vol_band") or 0.0)
         elapsed_min = (now - _window_start(now)) / 60.0
         early_time = (window not in filled) and (

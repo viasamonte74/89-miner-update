@@ -29,7 +29,7 @@ Fork: `viasamonte74/89-miner-update` @ `/workspace/InfiniteQuant-Subnet`.
 
 ### P3
 13. `scripts/fleet_report.py` — read-only public page fetch → `$SN89_DATA_ROOT/reports/`.
-14. **No strategy change.** Prior research already reports no OOS edge vs always-LONG; shipping drift-fade without a fresh walk-forward would violate the guide.
+14. **HF fade-spike (2026-10-16 follow-up).** `SN89_HF_DIR_MODE=fade_spike` fades ≥2σ moves over 5m on ≤30m pairs; minority relief off; bar refresh 60s + live quotes; daily cap ~20 / gap 120s. 1m-bar BT ~52% (not tick-parity). Paper / `fleet_report.py` before trusting volume.
 
 ## New flags (defaults)
 

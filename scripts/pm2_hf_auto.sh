@@ -31,6 +31,12 @@ _OV_MAXH="${SN89_HF_MAX_HORIZON_S:-}"
 _OV_MAXDAY="${SN89_HF_MAX_PER_DAY:-}"
 _OV_MAXPAIR="${SN89_HF_MAX_PER_PAIR_PER_DAY:-}"
 _OV_GAP="${SN89_HF_MIN_GAP_S:-}"
+_OV_DIR="${SN89_HF_DIR_MODE:-}"
+_OV_MINREL="${SN89_HF_ALLOW_MINORITY_EDGE:-}"
+_OV_BARREF="${SN89_HF_BAR_REFRESH_S:-}"
+_OV_BARAGE="${SN89_HF_BAR_MAX_AGE_MIN:-}"
+_OV_FADEMIN="${SN89_HF_FADE_SPIKE_MIN:-}"
+_OV_FADEZ="${SN89_HF_FADE_SPIKE_Z:-}"
 
 set -a
 # shellcheck disable=SC1091
@@ -60,6 +66,12 @@ set +a
 [[ -n "$_OV_MAXDAY" ]] && export SN89_HF_MAX_PER_DAY="$_OV_MAXDAY"
 [[ -n "$_OV_MAXPAIR" ]] && export SN89_HF_MAX_PER_PAIR_PER_DAY="$_OV_MAXPAIR"
 [[ -n "$_OV_GAP" ]] && export SN89_HF_MIN_GAP_S="$_OV_GAP"
+[[ -n "$_OV_DIR" ]] && export SN89_HF_DIR_MODE="$_OV_DIR"
+[[ -n "$_OV_MINREL" ]] && export SN89_HF_ALLOW_MINORITY_EDGE="$_OV_MINREL"
+[[ -n "$_OV_BARREF" ]] && export SN89_HF_BAR_REFRESH_S="$_OV_BARREF"
+[[ -n "$_OV_BARAGE" ]] && export SN89_HF_BAR_MAX_AGE_MIN="$_OV_BARAGE"
+[[ -n "$_OV_FADEMIN" ]] && export SN89_HF_FADE_SPIKE_MIN="$_OV_FADEMIN"
+[[ -n "$_OV_FADEZ" ]] && export SN89_HF_FADE_SPIKE_Z="$_OV_FADEZ"
 
 export PYTHONPATH="$SN89_REPO"
 export SN89_DATA_ROOT

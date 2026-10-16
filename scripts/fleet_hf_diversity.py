@@ -126,12 +126,25 @@ def load_subs_from_submit_log(path: Path) -> list[tuple]:
 
 
 def _dedupe_key(row: tuple) -> tuple:
-    """Prefer seq when present; else (pair, direction, t0_ms)."""
+    """Prefer seq when present; else bucketed (pair, direction, t0).
+
+    Bucket t0 to 2s so receipt grid_t0 vs local submit_ok clocks do not
+    double-count the same fill when seq is missing on one side.
+    """
     t0, pair, direction = row[0], row[1], row[2]
     seq = row[4] if len(row) > 4 else None
     if seq is not None and int(seq) > 0:
         return ("seq", int(seq))
-    return ("t0", int(t0), str(pair), str(direction))
+    return ("t0", int(t0) // 2000, str(pair), str(direction))
+
+
+def _near_dup(a: tuple, b: tuple, *, ms: int = 5_000) -> bool:
+    """Same pair/dir within ``ms`` — catch seq-less receipt↔log duplicates."""
+    return (
+        str(a[1]).upper() == str(b[1]).upper()
+        and str(a[2]).upper() == str(b[2]).upper()
+        and abs(int(a[0]) - int(b[0])) <= int(ms)
+    )
 
 
 def load_diversity_subs(
@@ -140,23 +153,22 @@ def load_diversity_subs(
     log_path: Path | None = None,
     state_dir: Path | None = None,
 ) -> list[tuple]:
-    """Prefer receipts; merge log gaps. De-dupe on seq (not mismatched clocks)."""
+    """Prefer receipts; merge log gaps. De-dupe on seq / near-t0 (not pair alone)."""
     rec = load_subs_from_receipts(receipts_path(hotkey, state_dir))
     seen = {_dedupe_key(r) for r in rec}
-    # Also remember seq-less receipt (pair,dir) near receipt times poorly —
-    # seq is the reliable key when both sources have it.
     if log_path is not None:
         for r in load_subs_from_submit_log(log_path):
             key = _dedupe_key(r)
             if key in seen:
                 continue
-            # If log has no seq, skip when receipts already cover this pair/dir
-            # with any seq (avoid double-count from clock skew).
-            if key[0] == "t0":
-                pair, direction = r[1], r[2]
+            # Seq-less log row that matches a receipt within 5s → same fill.
+            if any(_near_dup(r, x) for x in rec):
+                continue
+            # Log seq that already appears on a receipt (clock-skew t0).
+            seq = r[4] if len(r) > 4 else None
+            if seq is not None and int(seq) > 0:
                 if any(
-                    x[1] == pair and x[2] == direction and len(x) > 4
-                    for x in rec
+                    len(x) > 4 and int(x[4]) == int(seq) for x in rec
                 ):
                     continue
             rec.append(r)

@@ -193,3 +193,32 @@ def load_stats_note() -> str:
         return f"stats@{o.get('generated_at')}"
     except (OSError, json.JSONDecodeError, TypeError):
         return "builtin_priors"
+
+
+def stats_age_hours(now: float | None = None) -> float | None:
+    """Hours since fleet_pair_stats.json ``generated_at``; None if missing."""
+    import time
+
+    try:
+        o = json.loads(STATS_PATH.read_text(encoding="utf-8"))
+        gen = float(o.get("generated_at") or 0)
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return None
+    if gen <= 0:
+        return None
+    return (float(now if now is not None else time.time()) - gen) / 3600.0
+
+
+def stats_stale(
+    now: float | None = None,
+    *,
+    max_age_h: float | None = None,
+) -> bool:
+    """True if stats missing or older than SN89_FLEET_STATS_MAX_AGE_H (default 48h)."""
+    limit = max_age_h
+    if limit is None:
+        limit = float(os.environ.get("SN89_FLEET_STATS_MAX_AGE_H", "48"))
+    age = stats_age_hours(now)
+    if age is None:
+        return True
+    return age > float(limit)
