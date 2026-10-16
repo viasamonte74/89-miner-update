@@ -20,5 +20,6 @@ build/
 .pm2/
 sn89_data/miner.env
 sn89_data/network_live_cache.json
+sn89_data/reports/
 logs/
 *.jsonl

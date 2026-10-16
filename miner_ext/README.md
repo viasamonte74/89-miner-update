@@ -38,13 +38,14 @@ pytest miner_ext/tests -q
 
 # Phase 2 — baselines (walk-forward vs grader)
 python -m miner_ext.backtest.bars
-python -m miner_ext.backtest.run_baselines
+# NOTE: miner_ext.backtest.run_baselines and miner_ext.train.retrain / features /
+# build_dataset / signals.selector / protocol_adapter are currently missing as
+# .py sources in this fork (only stale __pycache__ remains). Restore from
+# DeltaCompute24/InfiniteQuant-Subnet or the operator box before running them.
+python -m miner_ext.backtest.walkforward  # available modules only
 
 # Grow archive continuously
 python -m miner_ext.data.tick_archiver --loop --interval-s 180 --workers 2
-
-# Weekly XGBoost retrain vs always_LONG (see train/README.md)
-python -m miner_ext.train.retrain
 ```
 
-Data root: `/workspace/sn89_data/` (raw windows + bars + dataset).
+Data root: `$SN89_DATA_ROOT` (default `/workspace/sn89_data/`).
