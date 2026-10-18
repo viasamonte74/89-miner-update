@@ -85,6 +85,53 @@ def test_improve_mode_allows_minority_step_blocks_worsening():
     assert allow_b is False
 
 
+def test_improve_above_target_allows_non_worsening():
+    """Once share ≥ floor+margin, improve must not freeze (old bug)."""
+    now = time.time()
+    # Balanced book → high two-sidedness share
+    by = {
+        "SUIUSD": (5, 5),
+        "ALGOUSD": (5, 5),
+        "ADAUSD": (5, 5),
+        "NEARUSD": (5, 5),
+        "KPEPEUSD": (5, 5),
+    }
+    subs = _subs_from_by_pair(by, horizon_s=1800.0, now=now)
+    cur = hf_mod.hf_diversity(subs, now)
+    target = float(cur["floor"]) + 0.05
+    assert cur["share"] + 1e-12 >= target
+    # New pair at balance keeps share high
+    new_pair = {"pair": "ZROUSD", "direction": "LONG", "horizon_s": 1800}
+    allow_np, _, proj_np = g.diversity_guard_allows(
+        subs, new_pair, now, margin=0.05, guard_min_n=30, enabled=True, mode="improve"
+    )
+    assert proj_np["share"] + 1e-12 >= target
+    assert allow_np is True
+    # Balanced continuation on an existing pair
+    bal = {"pair": "SUIUSD", "direction": "LONG", "horizon_s": 1800}
+    allow_b, _, proj_b = g.diversity_guard_allows(
+        subs, bal, now, margin=0.05, guard_min_n=30, enabled=True, mode="improve"
+    )
+    assert proj_b["share"] + 1e-12 >= min(cur["share"], target) - 1e-9
+    assert allow_b is True
+
+
+def test_improve_new_pair_when_below_floor_requires_non_worsening():
+    now = time.time()
+    subs = _subs_from_by_pair(H1_BY_PAIR, horizon_s=1800.0, now=now)
+    # New pair LONG starts balanced on that pair → usually helps or holds share
+    cand = {"pair": "ZROUSD", "direction": "LONG", "horizon_s": 1800}
+    allow, cur, proj = g.diversity_guard_allows(
+        subs, cand, now, margin=0.05, guard_min_n=30, enabled=True, mode="improve"
+    )
+    if proj["share"] + 1e-12 >= cur["share"] or proj["share"] + 1e-12 >= (
+        float(proj["floor"]) + 0.05
+    ):
+        assert allow is True
+    else:
+        assert allow is False
+
+
 def test_target_mode_still_blocks_partial_repair():
     now = time.time()
     subs = _subs_from_by_pair(H1_BY_PAIR, horizon_s=1800.0, now=now)

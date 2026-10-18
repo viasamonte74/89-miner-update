@@ -21,7 +21,12 @@ from pathlib import Path
 STATS_PATH = Path(
     os.environ.get("SN89_FLEET_STATS", "/workspace/sn89_data/fleet_pair_stats.json")
 )
-PRIORS_MODE = os.environ.get("SN89_FLEET_PRIORS_MODE", "off").strip().lower()
+_RAW_PRIORS_MODE = os.environ.get("SN89_FLEET_PRIORS_MODE", "off").strip().lower()
+# Unknown values (typos from miner.env) → off, never silent legacy.
+if _RAW_PRIORS_MODE in ("off", "legacy", "wilson"):
+    PRIORS_MODE = _RAW_PRIORS_MODE
+else:
+    PRIORS_MODE = "off"
 PRIORS_MIN_N = int(os.environ.get("SN89_FLEET_PRIORS_MIN_N", "30"))
 # Wilson LB must exceed this to boost (>0.5) or fall below to ban/penalize.
 PRIORS_WILSON_Z = float(os.environ.get("SN89_FLEET_PRIORS_WILSON_Z", "1.96"))

@@ -67,7 +67,8 @@ LF_CLAIM_DIR = Path(
 
 # Eligibility needs ~50 / 8 trading days ≈ 6.3/day. Protocol allows 30/day;
 # fade-spike fires ~10×/pair/day — raise via env after the fade path is live.
-MAX_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_DAY", "20"))
+MAX_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_DAY", "8"))
+SERIES_MAX_TIP_AGE_S = float(os.environ.get("SN89_HF_SERIES_MAX_TIP_AGE_S", "120"))
 # Cap concentration on one pair per UTC day (SUI dominated prior book).
 MAX_PER_PAIR_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_PAIR_PER_DAY", "6"))
 MIN_GAP_S = float(os.environ.get("SN89_HF_MIN_GAP_S", "120"))  # polite; protocol ~250ms
@@ -513,7 +514,8 @@ def _refresh_bars(pairs: list[str]) -> bool:
     """
     from miner_ext.backtest.bars import build_bars
 
-    lock_path = Path("/workspace/sn89_data/bars_refresh.lock")
+    data_root = Path(os.environ.get("SN89_DATA_ROOT", "/workspace/sn89_data"))
+    lock_path = data_root / "bars_refresh.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+", encoding="utf-8") as lf:
         try:
@@ -752,6 +754,14 @@ def score_hf(
     # (fade backtest ~52% vs trend-follow ~49%).
 
     if DIR_MODE == "fade_spike":
+        if LIVE_QUOTES and (
+            live_quote is None
+            or not hf_live_quotes.quote_is_fresh(live_quote, now=now)
+        ):
+            return None
+        tip_age_s = max(0.0, now - float(t_ms[-1]) / 1000.0)
+        if tip_age_s > SERIES_MAX_TIP_AGE_S:
+            return None
         fade = hf_fade_spike.fade_direction(
             t_ms,
             close,
@@ -864,11 +874,19 @@ def rank_hf(
             live = hf_live_quotes.fetch_live_price(pair, wallet=wallet)
         dirs: tuple[str, ...]
         if DIR_MODE == "fade_spike":
-            # Resolve fade side once; avoid scoring the trend side.
+            # Fail closed: fade needs a fresh live tip (and series tip < 2 min).
+            # Stale bars + missing quote previously invented fake ≥1.75σ spikes.
+            if LIVE_QUOTES and (
+                live is None or not hf_live_quotes.quote_is_fresh(live, now=now)
+            ):
+                continue
             series = _series_for_score(pair, cache, now=now, live_quote=live)
             if series is None:
                 continue
             t_ms, close, decision_ms = series
+            tip_age_s = max(0.0, now - float(t_ms[-1]) / 1000.0)
+            if tip_age_s > SERIES_MAX_TIP_AGE_S:
+                continue
             fade = hf_fade_spike.fade_direction(
                 t_ms,
                 close,

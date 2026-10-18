@@ -221,9 +221,11 @@ def diversity_guard_allows(
     """Return (allow, current_div, projected_div).
 
     Modes (SN89_HF_DIVERSITY_GUARD_MODE):
-      improve — allow if projected share >= current share (default). Optional
-                hard reject only if share falls AND projected n >= gate min.
-      target  — legacy: require share >= floor + margin in one step.
+      improve — allow if projected share ≥ floor+margin (already clear) OR
+                projected share ≥ current share (repair / non-worsening).
+                Prevents freeze when already above the floor: balanced or
+                new-pair calls that keep share ≥ target must pass.
+      target  — legacy: require share ≥ floor + margin in one step.
     """
     current = hf_mod.hf_diversity(subs, now)
     projected = project_diversity(subs, candidate, now)
@@ -242,8 +244,9 @@ def diversity_guard_allows(
     if mode == "target":
         return proj_share + 1e-12 >= target, current, projected
 
-    # improve (default): never worsen two-sidedness once guard is active.
-    # Still prefer reaching target, but do not require it in one call.
+    # improve (default): at/above target after the call, or non-worsening.
+    if proj_share + 1e-12 >= target:
+        return True, current, projected
     if proj_share + 1e-12 >= cur_share:
         return True, current, projected
     return False, current, projected

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -18,6 +19,15 @@ CACHE_TTL_S = float(os.environ.get("SN89_HF_LIVE_QUOTE_TTL_S", "8"))
 STREAM_WAIT_S = float(os.environ.get("SN89_HF_LIVE_QUOTE_WAIT_S", "4"))
 # Keep enough live ticks to cover fade windows even when 1m bars lag ~10–15m.
 HIST_KEEP_MS = int(float(os.environ.get("SN89_HF_LIVE_HIST_MIN", "20")) * 60_000)
+# Quotes older than this are treated as missing (fail closed).
+MAX_QUOTE_AGE_S = float(os.environ.get("SN89_HF_LIVE_QUOTE_MAX_AGE_S", "120"))
+DATA_ROOT = Path(os.environ.get("SN89_DATA_ROOT", "/workspace/sn89_data"))
+SHARED_CACHE_PATH = Path(
+    os.environ.get(
+        "SN89_HF_LIVE_QUOTE_CACHE",
+        str(DATA_ROOT / "hf_live_quotes_cache.json"),
+    )
+)
 
 _cache: dict[str, tuple[float, float, float]] = {}  # pair -> (fetched_at, price, tick_ms)
 _token_cache: dict[str, tuple[float, str]] = {}  # hotkey -> (ts, token)
@@ -36,11 +46,31 @@ def _mint_token(wallet: Any) -> str:
     return tok
 
 
+def _parse_tick_ms(d: dict) -> int | None:
+    """Explicit timestamp fields only — never invent wall-clock freshness."""
+    raw = None
+    for key in ("t", "ts_ms", "t_ms", "timestamp", "ts", "time"):
+        if d.get(key) is not None:
+            raw = d.get(key)
+            break
+    if raw is None:
+        return None
+    try:
+        t = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if t <= 0:
+        return None
+    # seconds vs milliseconds
+    if t < 1e12:
+        t *= 1000.0
+    return int(t)
+
+
 def _record_hist(pair: str, t_ms: int, price: float) -> None:
     pair = pair.upper()
     buf = _hist.setdefault(pair, [])
     if buf and t_ms < buf[-1][0]:
-        # Out-of-order: insert sorted, rare.
         buf.append((t_ms, price))
         buf.sort(key=lambda x: x[0])
     elif buf and t_ms == buf[-1][0]:
@@ -48,7 +78,6 @@ def _record_hist(pair: str, t_ms: int, price: float) -> None:
     else:
         buf.append((t_ms, price))
     cutoff = t_ms - HIST_KEEP_MS
-    # Drop from left.
     i = 0
     while i < len(buf) and buf[i][0] < cutoff:
         i += 1
@@ -73,15 +102,99 @@ def hist_price_at_or_before(pair: str, t_ms: int) -> float | None:
     return best
 
 
+def quote_age_s(quote: dict, *, now: float | None = None) -> float:
+    now_ms = int((now if now is not None else time.time()) * 1000)
+    return max(0.0, (now_ms - int(quote["t_ms"])) / 1000.0)
+
+
+def quote_is_fresh(quote: dict | None, *, now: float | None = None) -> bool:
+    if not quote:
+        return False
+    return quote_age_s(quote, now=now) <= MAX_QUOTE_AGE_S
+
+
+def _read_shared_cache(pair: str, now: float) -> dict | None:
+    try:
+        if not SHARED_CACHE_PATH.exists():
+            return None
+        data = json.loads(SHARED_CACHE_PATH.read_text(encoding="utf-8"))
+        row = (data.get("quotes") or {}).get(pair.upper())
+        if not row:
+            return None
+        fetched_at = float(row.get("fetched_at") or 0)
+        if now - fetched_at > CACHE_TTL_S:
+            return None
+        t_ms = int(row["t_ms"])
+        price = float(row["price"])
+        age_s = (now * 1000 - t_ms) / 1000.0
+        if age_s > MAX_QUOTE_AGE_S:
+            return None
+        _cache[pair.upper()] = (fetched_at, price, float(t_ms))
+        _record_hist(pair.upper(), t_ms, price)
+        return {
+            "pair": pair.upper(),
+            "price": price,
+            "t_ms": t_ms,
+            "cached": True,
+            "shared": True,
+        }
+    except (OSError, json.JSONDecodeError, TypeError, ValueError, KeyError):
+        return None
+
+
+def _write_shared_cache(pair: str, price: float, t_ms: int, fetched_at: float) -> None:
+    import fcntl
+
+    try:
+        SHARED_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        lock = SHARED_CACHE_PATH.with_suffix(".lock")
+        lock.touch(exist_ok=True)
+        with lock.open("a+", encoding="utf-8") as lf:
+            fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+            try:
+                data: dict = {"quotes": {}}
+                if SHARED_CACHE_PATH.exists():
+                    try:
+                        data = json.loads(SHARED_CACHE_PATH.read_text(encoding="utf-8"))
+                    except (OSError, json.JSONDecodeError):
+                        data = {"quotes": {}}
+                quotes = data.setdefault("quotes", {})
+                quotes[pair.upper()] = {
+                    "price": float(price),
+                    "t_ms": int(t_ms),
+                    "fetched_at": float(fetched_at),
+                }
+                # Drop very old entries.
+                cutoff = fetched_at - 600
+                for k in list(quotes.keys()):
+                    if float(quotes[k].get("fetched_at") or 0) < cutoff:
+                        del quotes[k]
+                tmp = SHARED_CACHE_PATH.with_suffix(".tmp")
+                tmp.write_text(json.dumps(data), encoding="utf-8")
+                os.replace(tmp, SHARED_CACHE_PATH)
+            finally:
+                fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
+    except OSError:
+        pass
+
+
 def fetch_live_price(pair: str, wallet: Any | None = None, token: str | None = None) -> dict | None:
-    """Return {pair, price, t_ms} from the partner SSE stream, or None."""
+    """Return {pair, price, t_ms} from the partner SSE stream, or None.
+
+    Fail closed: missing/unparseable timestamp → no quote (never invent now()).
+    """
     if not LIVE_ENABLED:
         return None
     pair = pair.upper()
     now = time.time()
     cached = _cache.get(pair)
     if cached and now - cached[0] < CACHE_TTL_S:
-        return {"pair": pair, "price": cached[1], "t_ms": int(cached[2]), "cached": True}
+        q = {"pair": pair, "price": cached[1], "t_ms": int(cached[2]), "cached": True}
+        if quote_is_fresh(q, now=now):
+            return q
+    shared = _read_shared_cache(pair, now)
+    if shared is not None:
+        return shared
 
     tok = token
     if not tok:
@@ -116,15 +229,28 @@ def fetch_live_price(pair: str, wallet: Any | None = None, token: str | None = N
                 px = d.get("price")
                 if px is None:
                     continue
-                t_ms = d.get("t") or d.get("ts_ms") or d.get("t_ms") or int(time.time() * 1000)
+                t_ms = _parse_tick_ms(d)
+                if t_ms is None:
+                    # Stale-looking payload without a real clock — skip.
+                    continue
                 try:
                     price = float(px)
-                    t_ms = int(t_ms)
                 except (TypeError, ValueError):
                     continue
-                _cache[pair] = (time.time(), price, float(t_ms))
+                age_s = (time.time() * 1000 - t_ms) / 1000.0
+                if age_s > MAX_QUOTE_AGE_S:
+                    continue
+                fetched_at = time.time()
+                _cache[pair] = (fetched_at, price, float(t_ms))
                 _record_hist(pair, t_ms, price)
-                return {"pair": pair, "price": price, "t_ms": t_ms, "cached": False}
+                _write_shared_cache(pair, price, t_ms, fetched_at)
+                return {
+                    "pair": pair,
+                    "price": price,
+                    "t_ms": t_ms,
+                    "cached": False,
+                    "shared": False,
+                }
     except Exception:  # noqa: BLE001
         return None
     return None
@@ -133,10 +259,11 @@ def fetch_live_price(pair: str, wallet: Any | None = None, token: str | None = N
 def append_live_to_series(
     t_ms: Any, close: Any, quote: dict
 ) -> tuple[Any, Any]:
-    """Append live tick; bridge large gaps with 1m forward-fills of last close.
+    """Append live tip only — do NOT bridge archive gaps with the last close.
 
-    Bridging keeps index-based lookbacks usable when the archive lags ~10–15m.
-    The final point is the live price so decision_ms is current.
+    Forward-filling the old close across a 10–30m gap invents a flat tape then
+    a fake spike when the live tip lands (majority of random moments look like
+    ≥1.75σ). Prefer fail-closed / live-hist overlay instead.
     """
     t = np.asarray(t_ms, dtype=np.int64)
     c = np.asarray(close, dtype=np.float64)
@@ -148,16 +275,6 @@ def append_live_to_series(
         c = c.copy()
         c[-1] = qp
         return t, c
-    last_t = int(t[-1])
-    last_c = float(c[-1])
-    gap_ms = qt - last_t
-    # Bridge minute marks between last bar and live (exclusive of live).
-    if gap_ms > 90_000:
-        step = 60_000
-        fill_t = list(range(last_t + step, qt, step))
-        if fill_t:
-            t = np.concatenate([t, np.asarray(fill_t, dtype=np.int64)])
-            c = np.concatenate([c, np.full(len(fill_t), last_c, dtype=np.float64)])
     return np.append(t, qt), np.append(c, qp)
 
 

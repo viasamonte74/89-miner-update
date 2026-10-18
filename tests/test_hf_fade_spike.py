@@ -53,6 +53,36 @@ def test_down_spike_fades_long():
     assert out["z"] < -2.0
 
 
+def test_threshold_boundary_spike():
+    """Just-above / just-below min_abs_z at a controlled σ."""
+    t0 = 1_700_000_000_000
+    n = 90
+    t_ms = np.arange(n, dtype=np.int64) * 60_000 + t0
+    # Constant 1m log-return σ ≈ 0.001 so denom = 0.001 * sqrt(5)
+    close = np.full(n, 100.0, dtype=np.float64)
+    for i in range(1, n):
+        close[i] = close[i - 1] * math.exp(0.001 if i % 2 == 0 else -0.001)
+    # Rebuild with fixed rets so std is known: alternate ±r
+    close = np.empty(n, dtype=np.float64)
+    close[0] = 100.0
+    r = 0.001
+    for i in range(1, n):
+        close[i] = close[i - 1] * math.exp(r if (i % 2) else -r)
+    sig = float(np.std(np.diff(np.log(close[-61:])), ddof=1))
+    denom = sig * math.sqrt(5.0)
+    # Place exact z at tip vs 5m-ago
+    z_target = 2.05
+    close = close.copy()
+    close[-1] = float(close[-6]) * math.exp(z_target * denom)
+    out = fs.fade_direction(t_ms, close, int(t_ms[-1]), window_min=5, min_abs_z=2.0)
+    assert out is not None
+    assert out["abs_z"] >= 2.0
+    # Below threshold
+    close2 = close.copy()
+    close2[-1] = float(close2[-6]) * math.exp(1.5 * denom)
+    assert fs.fade_direction(t_ms, close2, int(t_ms[-1]), window_min=5, min_abs_z=2.0) is None
+
+
 def test_near_dup_dedupe_key_buckets():
     import fleet_hf_diversity as g
 
@@ -65,34 +95,51 @@ def test_near_dup_dedupe_key_buckets():
 
 
 def test_wall_clock_spike_with_live_hist_gap():
-    """Dense hist over last 5m after a lagging parquet tip → wall-clock z."""
-    t0 = 1_700_000_000_000
-    # Parquet ends 12 minutes before "now"
-    n = 120
-    t_bars = np.arange(n, dtype=np.int64) * 60_000 + t0
+    """Dense 1m hist covering lookback+window (no archive bridge) → wall-clock z."""
+    now = 1_700_000_000_000 + 200 * 60_000
+    n = 90
+    t_ms = np.asarray([now - (n - 1 - i) * 60_000 for i in range(n)], dtype=np.int64)
     close = np.full(n, 100.0, dtype=np.float64)
     rng = np.random.default_rng(1)
     close *= np.exp(np.cumsum(rng.normal(0, 0.0004, size=n)))
-    now = int(t_bars[-1] + 12 * 60_000)
-    # Live hist: flat then sharp up in last 5 minutes
-    hist_t = [now - (5 - i) * 60_000 for i in range(6)]
-    hist_c = [100.0] * 5 + [100.0 * math.exp(0.04)]
-    t_ms = np.concatenate([t_bars, np.asarray(hist_t, dtype=np.int64)])
-    c = np.concatenate([close, np.asarray(hist_c, dtype=np.float64)])
-    out = fs.fade_direction(t_ms, c, now, window_min=5, min_abs_z=2.0)
+    close[-1] = float(close[-6]) * math.exp(0.04)
+    out = fs.fade_direction(t_ms, close, now, window_min=5, min_abs_z=2.0)
     assert out is not None
     assert out["direction"] == "SHORT"
+    assert out.get("wall_clock") is True
 
 
-def test_bridge_append_live():
+def test_stale_bridge_no_wall_clock_returns_none():
+    """Archive tip + live tip 15m later with no hist → no wall-clock anchor → None."""
+    t0 = 1_700_000_000_000
+    n = 90
+    t_bars = np.arange(n, dtype=np.int64) * 60_000 + t0
+    close = np.full(n, 100.0, dtype=np.float64)
+    rng = np.random.default_rng(2)
+    close *= np.exp(np.cumsum(rng.normal(0, 0.0004, size=n)))
+    # Only append a live tip 15 minutes later (the old bridge pattern)
+    now = int(t_bars[-1] + 15 * 60_000)
+    t_ms = np.append(t_bars, now)
+    c = np.append(close, float(close[-1]) * math.exp(0.05))
+    assert fs.fade_direction(t_ms, c, now, window_min=5, min_abs_z=1.75) is None
+
+
+def test_append_live_does_not_bridge_gaps():
     import hf_live_quotes as lq
 
     t0 = 1_700_000_000_000
     t = np.array([t0], dtype=np.int64)
     c = np.array([100.0], dtype=np.float64)
-    # 11 minutes later
     qt = t0 + 11 * 60_000
     t2, c2 = lq.append_live_to_series(t, c, {"t_ms": qt, "price": 101.0})
     assert int(t2[-1]) == qt
     assert float(c2[-1]) == 101.0
-    assert len(t2) > 2  # bridged minutes
+    assert len(t2) == 2  # tip only — no forward-filled minutes
+
+
+def test_parse_tick_ms_requires_timestamp():
+    import hf_live_quotes as lq
+
+    assert lq._parse_tick_ms({"price": 1.0}) is None
+    assert lq._parse_tick_ms({"price": 1.0, "t": 1_700_000_000}) == 1_700_000_000_000
+    assert lq._parse_tick_ms({"price": 1.0, "t_ms": 1_700_000_000_000}) == 1_700_000_000_000

@@ -125,12 +125,12 @@ QUALITY_ONLY = os.environ.get("SN89_LF_QUALITY_ONLY", "1").strip() not in (
 )
 # Soft daily cap below the chain 3/day (0 = use chain cap only). Plan: 1–2 HQ calls.
 LF_MAX_PER_DAY = int(os.environ.get("SN89_LF_MAX_PER_DAY", "0"))
-# Prefer historically decisive pairs (score mult); CSV. Empty = no extra boost.
-_LF_PREFER_RAW = os.environ.get("SN89_LF_PREFER_PAIRS", "ZROUSD,TAOUSD,DOTUSD,XRPUSD")
+# Optional prefer-pair list (scan order / logging only). Score boost defaults OFF.
+_LF_PREFER_RAW = os.environ.get("SN89_LF_PREFER_PAIRS", "")
 LF_PREFER_PAIRS = frozenset(
     x.strip().upper() for x in _LF_PREFER_RAW.split(",") if x.strip()
 )
-LF_PREFER_MULT = float(os.environ.get("SN89_LF_PREFER_MULT", "1.20"))
+LF_PREFER_MULT = float(os.environ.get("SN89_LF_PREFER_MULT", "1.0"))
 # Strict qualify mode: optional proven-pair filter + higher early score.
 # SHORT-only bias defaults OFF — h2/h3 ran 4W/15L under prefer-short.
 STRICT_MODE = os.environ.get("SN89_STRICT_MODE", "0").strip() not in (
@@ -168,28 +168,11 @@ BLOCK_SIBLING_OPPOSITE = os.environ.get(
     "SN89_LF_BLOCK_SIBLING_OPPOSITE", "1"
 ).strip() not in ("0", "false", "False")
 BAR_MAX_AGE_H = float(os.environ.get("SN89_LF_BAR_MAX_AGE_H", "3.0"))
-# Base priors (network / top-miner) then overlaid by fleet_priors (our book).
+# Soft-downs only (wash control). No hand-tuned pair boosts — those re-decide go/no-go.
 _PAIR_SCORE_MULT = {
     "BTCUSD": float(os.environ.get("SN89_AUTO_BTC_MULT", "0.20")),
     "ETHUSD": float(os.environ.get("SN89_AUTO_ETH_MULT", "0.30")),
     "SOLUSD": float(os.environ.get("SN89_AUTO_SOL_MULT", "0.70")),
-    "HYPEUSD": 0.70,
-    "ARBUSD": 0.60,
-    "DOGEUSD": 0.85,
-    "ZROUSD": 1.40,
-    "TAOUSD": 1.35,
-    "DOTUSD": 1.30,
-    "XRPUSD": 1.25,
-    "ALGOUSD": 1.25,
-    "LTCUSD": 1.22,
-    "UNIUSD": 1.20,
-    "BCHUSD": 1.18,
-    "NEARUSD": 1.18,
-    "SUIUSD": 1.12,
-    "WLDUSD": 1.12,
-    "AVAXUSD": 1.08,
-    "ENAUSD": 1.08,
-    "KPEPEUSD": 1.00,
 }
 # Fleet empirical overlay only in legacy priors mode (noisy small-n bans/boosts).
 if fleet_priors.PRIORS_MODE == "legacy":

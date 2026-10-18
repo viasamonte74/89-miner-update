@@ -3,15 +3,19 @@
 Backtest (1m bars, 30m HF bands): fade 5m/10m ≥2σ ~51.8–52.0% hit rate vs
 ~49.3% for following the last 2h trend. Env-gated from hf_auto_loop.
 
-Uses wall-clock windows so a live tip on stale parquet still measures the
-last W minutes of price, not W bar indices across an archive gap.
+Requires a wall-clock anchor within max_anchor_lag_s of the window start.
+Bar-index fallback across archive gaps is disabled (invents fake spikes).
 """
 from __future__ import annotations
 
 import math
+import os
 from typing import Any
 
 import numpy as np
+
+# Reject when the window-start sample is farther than this from target0.
+MAX_ANCHOR_LAG_S = float(os.environ.get("SN89_HF_FADE_MAX_ANCHOR_LAG_S", "120"))
 
 
 def _idx_at_or_before(t_ms: np.ndarray, decision_ms: int) -> int:
@@ -25,8 +29,9 @@ def spike_z(
     *,
     window_min: int = 5,
     sig_lookback_min: int = 60,
+    max_anchor_lag_s: float | None = None,
 ) -> dict[str, float] | None:
-    """Return spike stats or None if series too short / invalid.
+    """Return spike stats or None if series too short / invalid / stale.
 
     z = log-return over wall-clock ``window_min`` / (σ_1m * sqrt(window_min)),
     where σ_1m is the sample std of 1-minute log returns over the lookback
@@ -35,26 +40,25 @@ def spike_z(
     t_ms = np.asarray(t_ms, dtype=np.int64)
     close = np.asarray(close, dtype=np.float64)
     decision_ms = int(decision_ms)
+    lag_lim = (
+        float(MAX_ANCHOR_LAG_S)
+        if max_anchor_lag_s is None
+        else float(max_anchor_lag_s)
+    )
     i1 = _idx_at_or_before(t_ms, decision_ms)
     if i1 < 0:
         return None
     target0 = decision_ms - int(window_min) * 60_000
     i0 = _idx_at_or_before(t_ms, target0)
-    wall = i0 >= 0 and abs(int(t_ms[i0]) - target0) <= 90_000
-    if wall:
-        c0 = float(close[i0])
-        anchor_lag_s = float((int(t_ms[i0]) - target0) / 1000.0)
-        sig_end = i0
-    else:
-        # Fallback: W bar-steps (needs dense 1m history — fine on parquet,
-        # wrong across an unbridged archive gap).
-        w = int(window_min)
-        if i1 < w:
-            return None
-        i0 = i1 - w
-        c0 = float(close[i0])
-        anchor_lag_s = float((decision_ms - int(t_ms[i0])) / 1000.0 - window_min * 60.0)
-        sig_end = i0
+    # Fail closed: require a real wall-clock sample near the window start.
+    # Bar-index fallback across a 10–30m archive gap invents fake ≥1.75σ spikes.
+    if i0 < 0:
+        return None
+    anchor_lag_s = float((int(t_ms[i0]) - target0) / 1000.0)
+    if abs(anchor_lag_s) > lag_lim:
+        return None
+    c0 = float(close[i0])
+    sig_end = i0
     c1 = float(close[i1])
     if c0 <= 0 or c1 <= 0 or not math.isfinite(c0) or not math.isfinite(c1):
         return None
@@ -98,7 +102,7 @@ def spike_z(
         "sig_1m": float(sig),
         "window_min": float(window_min),
         "anchor_lag_s": float(anchor_lag_s),
-        "wall_clock": bool(wall),
+        "wall_clock": True,
     }
 
 
@@ -110,6 +114,7 @@ def fade_direction(
     window_min: int = 5,
     sig_lookback_min: int = 60,
     min_abs_z: float = 2.0,
+    max_anchor_lag_s: float | None = None,
 ) -> dict[str, Any] | None:
     """If |z| ≥ min_abs_z, return fade side (SHORT after up-spike, LONG after down)."""
     stats = spike_z(
@@ -118,6 +123,7 @@ def fade_direction(
         decision_ms,
         window_min=window_min,
         sig_lookback_min=sig_lookback_min,
+        max_anchor_lag_s=max_anchor_lag_s,
     )
     if stats is None:
         return None
@@ -134,4 +140,5 @@ def fade_direction(
         "window_min": int(window_min),
         "min_abs_z": float(min_abs_z),
         "anchor_lag_s": stats.get("anchor_lag_s"),
+        "wall_clock": bool(stats.get("wall_clock")),
     }
