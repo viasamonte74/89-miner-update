@@ -1,0 +1,13 @@
+# Prevent Syncthing peer from wiping local miner automation scripts.
+scripts/lf_auto_loop.py
+scripts/hf_auto_loop.py
+scripts/hf_fade_spike.py
+scripts/hf_live_quotes.py
+scripts/fleet_*.py
+scripts/network_live.py
+scripts/pm2_*.sh
+scripts/backtest/
+miner_ext/results/
+.git/
+__pycache__/
+**/*.pyc

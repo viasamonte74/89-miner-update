@@ -123,6 +123,14 @@ QUALITY_ONLY = os.environ.get("SN89_LF_QUALITY_ONLY", "1").strip() not in (
     "false",
     "False",
 )
+# Soft daily cap below the chain 3/day (0 = use chain cap only). Plan: 1–2 HQ calls.
+LF_MAX_PER_DAY = int(os.environ.get("SN89_LF_MAX_PER_DAY", "0"))
+# Prefer historically decisive pairs (score mult); CSV. Empty = no extra boost.
+_LF_PREFER_RAW = os.environ.get("SN89_LF_PREFER_PAIRS", "ZROUSD,TAOUSD,DOTUSD,XRPUSD")
+LF_PREFER_PAIRS = frozenset(
+    x.strip().upper() for x in _LF_PREFER_RAW.split(",") if x.strip()
+)
+LF_PREFER_MULT = float(os.environ.get("SN89_LF_PREFER_MULT", "1.20"))
 # Strict qualify mode: optional proven-pair filter + higher early score.
 # SHORT-only bias defaults OFF — h2/h3 ran 4W/15L under prefer-short.
 STRICT_MODE = os.environ.get("SN89_STRICT_MODE", "0").strip() not in (
@@ -168,9 +176,10 @@ _PAIR_SCORE_MULT = {
     "HYPEUSD": 0.70,
     "ARBUSD": 0.60,
     "DOGEUSD": 0.85,
-    "XRPUSD": 0.85,
-    "ZROUSD": 1.35,
-    "TAOUSD": 1.30,
+    "ZROUSD": 1.40,
+    "TAOUSD": 1.35,
+    "DOTUSD": 1.30,
+    "XRPUSD": 1.25,
     "ALGOUSD": 1.25,
     "LTCUSD": 1.22,
     "UNIUSD": 1.20,
@@ -465,8 +474,14 @@ def _iter_actionable(
     min_vol_band_2h_early: float = MIN_VOL_BAND_2H_EARLY,
     min_vol_band_2h_submit: float = MIN_VOL_BAND_2H_SUBMIT,
     now: float | None = None,
+    require_score: bool = False,
 ):
-    """Yield gate-passing candidates in rank order (for claim cascade)."""
+    """Yield gate-passing candidates in rank order (for claim cascade).
+
+    early=True: score + early vol floors (stricter).
+    early=False + require_score=True: submit vol floors but still need score
+    (quality-only path when 1.3 ≤ vol < early floor — previously never fired).
+    """
     for r in ranked:
         pair = str(r.get("pair") or "").upper()
         if fleet_priors.lf_pair_blocked(pair):
@@ -483,6 +498,8 @@ def _iter_actionable(
                 or vol2 < min_vol_band_2h_early
             ):
                 continue
+        elif require_score and score < early_score:
+            continue
         if now is not None and fleet_priors.lf_hour_blocked(
             now, score=score, score_floor=early_score
         ):
@@ -798,6 +815,8 @@ def score_candidate(
     score *= _PAIR_SCORE_MULT.get(pair, 1.0)
     if LF_WASH_AVOID and pair.upper() in LF_WASH_AVOID_PAIRS:
         score *= LF_WASH_AVOID_MULT
+    if LF_PREFER_PAIRS and pair.upper() in LF_PREFER_PAIRS:
+        score *= LF_PREFER_MULT
     score *= fleet_priors.lf_hour_mult(now)
     return {
         "pair": pair,
@@ -975,6 +994,9 @@ def run(
             "max_same_dir_per_day": MAX_SAME_DIR_PER_DAY,
             "skip_weak_eod": SKIP_WEAK_EOD,
             "quality_only": QUALITY_ONLY,
+            "lf_max_per_day": LF_MAX_PER_DAY,
+            "lf_prefer_pairs": sorted(LF_PREFER_PAIRS),
+            "lf_prefer_mult": LF_PREFER_MULT,
             "fleet_priors": fleet_priors.load_stats_note(),
             "priors_mode": fleet_priors.PRIORS_MODE,
             "lf_deny_pairs": (
@@ -1034,7 +1056,8 @@ def run(
         to_day_end = (_day_id(now) + 1) * 86_400 - now
         n_today = _submits_today(hk, now)
         cap, gap = config.submission_rules_as_of(now)
-        slots_left = max(0, int(cap) - n_today)
+        soft_cap = int(cap) if LF_MAX_PER_DAY <= 0 else min(int(cap), LF_MAX_PER_DAY)
+        slots_left = max(0, soft_cap - n_today)
         # Map today's submits onto slot windows 0..n-1 so restarts don't double-fire
         st["filled_windows"] = list(range(min(n_today, N_WINDOWS)))
         filled = set(st["filled_windows"])
@@ -1195,19 +1218,22 @@ def run(
             )
 
         # Cascade + exclusive fleet claim: never submit a live sibling (pair,dir).
-        # Quality-only: only the early (high-score) gate may fire.
+        # Quality-only: early vol floor first, then quality_submit (submit vol + score).
         target = None
         early = False
         want_early = early_time
-        phases: list[bool] = []
+        # (use_early_vol_floors, require_score, phase_name)
+        phases: list[tuple[bool, bool, str]] = []
         if want_early:
-            phases.append(True)
+            phases.append((True, False, "early"))
+            if QUALITY_ONLY:
+                phases.append((False, True, "quality_submit"))
         if (not QUALITY_ONLY) and (finalize or eod_force or catch_up):
             # Weak EOD/catch-up/finalize: require early-quality gates (fewer washes).
             use_early_gates = bool(SKIP_WEAK_EOD) or want_early
-            if use_early_gates not in phases:
-                phases.append(use_early_gates)
-        for use_early in phases:
+            phases.append((use_early_gates, False, "finalize_like"))
+        phase_used = ""
+        for use_early, require_score, phase_name in phases:
             for cand in _iter_actionable(
                 ranked,
                 early=use_early,
@@ -1215,6 +1241,7 @@ def run(
                 min_vol_band_early=min_vol_band_early,
                 min_vol_band_submit=min_vol_band_submit,
                 now=now,
+                require_score=require_score,
             ):
                 d_use = cand.get("direction") or (
                     "LONG" if direction == "AUTO" else direction
@@ -1243,7 +1270,8 @@ def run(
                     )
                     continue
                 target = cand
-                early = use_early
+                early = bool(use_early or require_score)
+                phase_used = phase_name
                 break
             if target is not None:
                 break
@@ -1254,7 +1282,10 @@ def run(
                 (
                     f"skip_no_actionable watch={watch['pair']}:{watch['direction']} "
                     f"score={watch['score']:.3f} vol_band={vol_band:.2f} "
-                    f"need_vol>={min_vol_band_submit} blocked={len(blocked)}"
+                    f"vol2h={float(watch.get('vol_band_2h') or 0):.2f} "
+                    f"need_vol>={min_vol_band_submit} need_vol2h>={MIN_VOL_BAND_2H_SUBMIT} "
+                    f"need_early_vol>={min_vol_band_early} "
+                    f"need_score>={early_score} blocked={len(blocked)}"
                 ),
             )
             continue
@@ -1266,6 +1297,9 @@ def run(
         if catch_up and not early and not finalize:
             reason = "catch_up"
             mark_window = missed[0]
+        elif phase_used == "quality_submit":
+            reason = "quality_submit"
+            mark_window = window
         elif early:
             reason = "early_threshold"
             mark_window = window

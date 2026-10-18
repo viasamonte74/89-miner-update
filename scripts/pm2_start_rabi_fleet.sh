@@ -144,6 +144,7 @@ start_lf() {
   local name="$1" hotkey="$2" rank="$3" state="$4" log="$5" stop="$6" siblings="$7" hf_log="$8"
   local quality_floor="${9:-0}"
   local wash_avoid="${10:-0}"
+  local max_day="${11:-2}"
   pm2 delete "$name" >/dev/null 2>&1 || true
   SN89_REPO="$SN89_REPO" \
   SN89_DATA_ROOT="$SN89_DATA_ROOT" \
@@ -163,10 +164,14 @@ start_lf() {
   SN89_STRICT_PREFER_SHORT=0 \
   SN89_LF_QUALITY_FLOOR="$quality_floor" \
   SN89_LF_QUALITY_ONLY=1 \
+  SN89_LF_MAX_PER_DAY="$max_day" \
+  SN89_LF_PREFER_PAIRS=ZROUSD,TAOUSD,DOTUSD,XRPUSD \
   SN89_FLEET_PRIORS_MODE=off \
   SN89_LF_WASH_AVOID="$wash_avoid" \
   SN89_LF_WASH_AVOID_PAIRS=BTCUSD \
   SN89_LF_BLOCK_SIBLING_OPPOSITE=1 \
+  SN89_AUTO_MIN_VOL_BAND_EARLY=1.50 \
+  SN89_AUTO_MIN_VOL_BAND_SUBMIT=1.30 \
   SN89_FLEET_HOTKEYS="${SN89_FLEET_HOTKEYS:-}" \
   SN89_NETWORK_LIVE_BLOCK=1 \
   pm2 start "$SN89_REPO/scripts/pm2_lf_auto.sh" \
@@ -202,7 +207,9 @@ start_hf() {
   SN89_FLEET_PRIORS_MODE=off \
   SN89_HF_DIR_MODE=fade_spike \
   SN89_HF_FADE_SPIKE_MIN=5 \
-  SN89_HF_FADE_SPIKE_Z=2.0 \
+  SN89_HF_FADE_SPIKE_Z=1.75 \
+  SN89_HF_MIN_VOL_BAND=1.30 \
+  SN89_HF_MIN_VOL_BAND_SHORT=0.75 \
   SN89_HF_BLOCK_SIBLING_OPPOSITE=0 \
   SN89_HF_REJECT_COOLDOWN_S=900 \
   SN89_HF_LIVE_QUOTES=1 \
@@ -210,7 +217,7 @@ start_hf() {
   SN89_HF_BAR_REFRESH_S=60 \
   SN89_HF_BAR_MAX_AGE_MIN=12 \
   SN89_HF_BAR_HARD_MAX_AGE_MIN=45 \
-  SN89_HF_AUTO_PAIRS=SUIUSD,ALGOUSD,ADAUSD,KPEPEUSD,NEARUSD,ZROUSD \
+  SN89_HF_AUTO_PAIRS=SUIUSD,ALGOUSD,ADAUSD,KPEPEUSD,NEARUSD,ZROUSD,TAOUSD,ARBUSD,DOTUSD,XRPUSD \
   SN89_HF_MAX_PER_DAY=20 \
   SN89_HF_MAX_PER_PAIR_PER_DAY=6 \
   SN89_HF_MIN_GAP_S=120 \
@@ -250,31 +257,31 @@ printf 'export SN89_FLEET_HOTKEYS="%s"\n' "$FLEET_HOTKEYS" \
   > "$SN89_DATA_ROOT/fleet_hotkeys.env"
 echo "SN89_FLEET_HOTKEYS=$SN89_FLEET_HOTKEYS"
 
-# h1: wash-avoid BTC (no extra volume). h2/h3: quality floor, both dirs (no SHORT-only).
+# h1: wash-avoid BTC, max 2 LF/day, prefer ZRO/TAO/DOT/XRP. h2/h3: quality floor.
 start_lf sn89-rabi-h1 rabi-h1 0 \
   "$SN89_STATE_DIR/lf_auto_state_h1.json" "$LOG_H1" \
   "$SN89_DATA_ROOT/STOP_AUTO_SUBMIT_H1" \
   "$SIB_LF_1" \
-  "$HF_LOG_H1" 0 1
+  "$HF_LOG_H1" 0 1 2
 
 start_lf sn89-rabi-h2 rabi-h2 0 \
   "$SN89_STATE_DIR/lf_auto_state_h2.json" "$LOG_H2" \
   "$SN89_DATA_ROOT/STOP_AUTO_SUBMIT_H2" \
   "$SIB_LF_2" \
-  "$HF_LOG_H2" 0.85 0
+  "$HF_LOG_H2" 0.85 0 2
 
 start_lf sn89-rabi-h3 rabi-h3 0 \
   "$SN89_STATE_DIR/lf_auto_state_h3.json" "$LOG_H3" \
   "$SN89_DATA_ROOT/STOP_AUTO_SUBMIT_H3" \
   "$SIB_LF_3" \
-  "$HF_LOG_H3" 0.85 0
+  "$HF_LOG_H3" 0.85 0 2
 
 if [[ "$INCLUDE_H4" == "1" ]]; then
   start_lf sn89-rabi-h4 rabi-h4 0 \
     "$SN89_STATE_DIR/lf_auto_state_h4.json" "$LOG_H4" \
     "$SN89_DATA_ROOT/STOP_AUTO_SUBMIT_H4" \
     "${LOG_H1}:${LOG_H2}:${LOG_H3}" \
-    "$HF_LOG_H4" 0 0
+    "$HF_LOG_H4" 0 0 2
 fi
 
 start_hf sn89-rabi-hf-h1 rabi-h1 0 \
