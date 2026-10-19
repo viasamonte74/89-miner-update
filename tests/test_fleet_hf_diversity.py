@@ -117,19 +117,18 @@ def test_improve_above_target_allows_non_worsening():
 
 
 def test_improve_new_pair_when_below_floor_requires_non_worsening():
+    """h1 book: new one-sided pair lowers share (5/32 → 5/33) → improve blocks."""
     now = time.time()
     subs = _subs_from_by_pair(H1_BY_PAIR, horizon_s=1800.0, now=now)
-    # New pair LONG starts balanced on that pair → usually helps or holds share
     cand = {"pair": "ZROUSD", "direction": "LONG", "horizon_s": 1800}
     allow, cur, proj = g.diversity_guard_allows(
         subs, cand, now, margin=0.05, guard_min_n=30, enabled=True, mode="improve"
     )
-    if proj["share"] + 1e-12 >= cur["share"] or proj["share"] + 1e-12 >= (
-        float(proj["floor"]) + 0.05
-    ):
-        assert allow is True
-    else:
-        assert allow is False
+    assert abs(cur["share"] - 0.15625) < 1e-9
+    assert abs(proj["share"] - (5.0 / 33.0)) < 1e-9
+    assert proj["share"] < cur["share"]
+    assert proj["share"] + 1e-12 < float(proj["floor"]) + 0.05
+    assert allow is False
 
 
 def test_target_mode_still_blocks_partial_repair():

@@ -143,3 +143,24 @@ def test_parse_tick_ms_requires_timestamp():
     assert lq._parse_tick_ms({"price": 1.0}) is None
     assert lq._parse_tick_ms({"price": 1.0, "t": 1_700_000_000}) == 1_700_000_000_000
     assert lq._parse_tick_ms({"price": 1.0, "t_ms": 1_700_000_000_000}) == 1_700_000_000_000
+
+
+def test_parse_tick_ms_divides_microseconds():
+    import hf_live_quotes as lq
+
+    # µs epoch → ms
+    assert lq._parse_tick_ms({"t": 1_700_000_000_000_000}) == 1_700_000_000_000
+
+
+def test_future_timestamp_not_fresh():
+    import time
+
+    import hf_live_quotes as lq
+
+    now = time.time()
+    future_ms = int((now + 120) * 1000)  # 2 minutes ahead
+    q = {"t_ms": future_ms, "price": 1.0}
+    assert lq.quote_is_fresh(q, now=now) is False
+    # small skew still OK
+    skew_ms = int((now + 5) * 1000)
+    assert lq.quote_is_fresh({"t_ms": skew_ms, "price": 1.0}, now=now) is True

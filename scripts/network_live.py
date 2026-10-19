@@ -169,3 +169,18 @@ def network_live_trades(
         if pair and direction:
             live.add((pair, direction))
     return live
+
+
+def network_live_pairs(
+    now: float | None = None,
+    *,
+    exclude_hotkeys: set[str] | frozenset[str] | None = None,
+    force: bool = False,
+) -> set[str]:
+    """Pairs with any open pending trade on a non-fleet hotkey."""
+    return {
+        pair
+        for pair, _dir in network_live_trades(
+            now, exclude_hotkeys=exclude_hotkeys, force=force
+        )
+    }

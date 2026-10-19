@@ -15,12 +15,16 @@ LIVE_ENABLED = os.environ.get("SN89_HF_LIVE_QUOTES", "1").strip() not in (
     "false",
     "False",
 )
-CACHE_TTL_S = float(os.environ.get("SN89_HF_LIVE_QUOTE_TTL_S", "8"))
+# Shared-file TTL: processes poll ~30–45s, so 8s almost never shared; 30s is
+# still well under the 120s freshness gate.
+CACHE_TTL_S = float(os.environ.get("SN89_HF_LIVE_QUOTE_TTL_S", "30"))
 STREAM_WAIT_S = float(os.environ.get("SN89_HF_LIVE_QUOTE_WAIT_S", "4"))
 # Keep enough live ticks to cover fade windows even when 1m bars lag ~10–15m.
 HIST_KEEP_MS = int(float(os.environ.get("SN89_HF_LIVE_HIST_MIN", "20")) * 60_000)
 # Quotes older than this are treated as missing (fail closed).
 MAX_QUOTE_AGE_S = float(os.environ.get("SN89_HF_LIVE_QUOTE_MAX_AGE_S", "120"))
+# Reject clock-skew / bad units that land more than this in the future.
+MAX_QUOTE_FUTURE_S = float(os.environ.get("SN89_HF_LIVE_QUOTE_MAX_FUTURE_S", "60"))
 DATA_ROOT = Path(os.environ.get("SN89_DATA_ROOT", "/workspace/sn89_data"))
 SHARED_CACHE_PATH = Path(
     os.environ.get(
@@ -47,7 +51,12 @@ def _mint_token(wallet: Any) -> str:
 
 
 def _parse_tick_ms(d: dict) -> int | None:
-    """Explicit timestamp fields only — never invent wall-clock freshness."""
+    """Explicit timestamp fields only — never invent wall-clock freshness.
+
+    Units: seconds (<1e12) → ×1000; microseconds/ns (≥1e14) → ÷1000 until ms.
+    A bare µs value left as "ms" looks far in the future and would otherwise
+    clamp to age 0 and pass the freshness gate.
+    """
     raw = None
     for key in ("t", "ts_ms", "t_ms", "timestamp", "ts", "time"):
         if d.get(key) is not None:
@@ -61,7 +70,10 @@ def _parse_tick_ms(d: dict) -> int | None:
         return None
     if t <= 0:
         return None
-    # seconds vs milliseconds
+    # µs / ns (and larger) → milliseconds
+    while t >= 1e14:
+        t /= 1000.0
+    # seconds → milliseconds
     if t < 1e12:
         t *= 1000.0
     return int(t)
@@ -103,14 +115,20 @@ def hist_price_at_or_before(pair: str, t_ms: int) -> float | None:
 
 
 def quote_age_s(quote: dict, *, now: float | None = None) -> float:
+    """Signed age in seconds (negative = timestamp in the future)."""
     now_ms = int((now if now is not None else time.time()) * 1000)
-    return max(0.0, (now_ms - int(quote["t_ms"])) / 1000.0)
+    return (now_ms - int(quote["t_ms"])) / 1000.0
 
 
 def quote_is_fresh(quote: dict | None, *, now: float | None = None) -> bool:
     if not quote:
         return False
-    return quote_age_s(quote, now=now) <= MAX_QUOTE_AGE_S
+    age = quote_age_s(quote, now=now)
+    if age < -MAX_QUOTE_FUTURE_S:
+        return False
+    if age < 0:
+        age = 0.0  # small clock skew OK
+    return age <= MAX_QUOTE_AGE_S
 
 
 def _read_shared_cache(pair: str, now: float) -> dict | None:
@@ -126,18 +144,18 @@ def _read_shared_cache(pair: str, now: float) -> dict | None:
             return None
         t_ms = int(row["t_ms"])
         price = float(row["price"])
-        age_s = (now * 1000 - t_ms) / 1000.0
-        if age_s > MAX_QUOTE_AGE_S:
-            return None
-        _cache[pair.upper()] = (fetched_at, price, float(t_ms))
-        _record_hist(pair.upper(), t_ms, price)
-        return {
+        q = {
             "pair": pair.upper(),
             "price": price,
             "t_ms": t_ms,
             "cached": True,
             "shared": True,
         }
+        if not quote_is_fresh(q, now=now):
+            return None
+        _cache[pair.upper()] = (fetched_at, price, float(t_ms))
+        _record_hist(pair.upper(), t_ms, price)
+        return q
     except (OSError, json.JSONDecodeError, TypeError, ValueError, KeyError):
         return None
 
@@ -237,20 +255,20 @@ def fetch_live_price(pair: str, wallet: Any | None = None, token: str | None = N
                     price = float(px)
                 except (TypeError, ValueError):
                     continue
-                age_s = (time.time() * 1000 - t_ms) / 1000.0
-                if age_s > MAX_QUOTE_AGE_S:
-                    continue
-                fetched_at = time.time()
-                _cache[pair] = (fetched_at, price, float(t_ms))
-                _record_hist(pair, t_ms, price)
-                _write_shared_cache(pair, price, t_ms, fetched_at)
-                return {
+                q = {
                     "pair": pair,
                     "price": price,
                     "t_ms": t_ms,
                     "cached": False,
                     "shared": False,
                 }
+                if not quote_is_fresh(q):
+                    continue
+                fetched_at = time.time()
+                _cache[pair] = (fetched_at, price, float(t_ms))
+                _record_hist(pair, t_ms, price)
+                _write_shared_cache(pair, price, t_ms, fetched_at)
+                return q
     except Exception:  # noqa: BLE001
         return None
     return None

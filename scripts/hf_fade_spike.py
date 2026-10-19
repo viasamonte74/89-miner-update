@@ -22,6 +22,26 @@ def _idx_at_or_before(t_ms: np.ndarray, decision_ms: int) -> int:
     return int(np.searchsorted(t_ms, decision_ms, side="right") - 1)
 
 
+def _resample_1m(t_ms: np.ndarray, close: np.ndarray) -> list[float]:
+    """Last-price sample on each completed 60s bucket (ascending)."""
+    if len(t_ms) == 0:
+        return []
+    out: list[float] = []
+    bucket = int(t_ms[0]) // 60_000
+    last_px = float(close[0])
+    for i in range(1, len(t_ms)):
+        b = int(t_ms[i]) // 60_000
+        if b != bucket:
+            out.append(last_px)
+            # fill empty buckets with flat carry so dt stays ~60s
+            for _ in range(b - bucket - 1):
+                out.append(last_px)
+            bucket = b
+        last_px = float(close[i])
+    out.append(last_px)
+    return out
+
+
 def spike_z(
     t_ms: np.ndarray,
     close: np.ndarray,
@@ -64,23 +84,18 @@ def spike_z(
         return None
     ret = math.log(c1 / c0)
 
-    need = int(sig_lookback_min) + 1
-    if sig_end < need:
+    # Resample lookback onto a 60s grid so sparse live ticks (~45s poll)
+    # are not treated as 1-minute returns (that inflates z by ~15%).
+    lookback_ms = int(sig_lookback_min) * 60_000
+    t_start = int(t_ms[sig_end]) - lookback_ms
+    i_lo = _idx_at_or_before(t_ms, t_start)
+    if i_lo < 0:
+        i_lo = 0
+    sl_t = t_ms[i_lo : sig_end + 1]
+    sl_c = close[i_lo : sig_end + 1]
+    if len(sl_t) < 12:
         return None
-    sl_t = t_ms[sig_end - need + 1 : sig_end + 1]
-    sl_c = close[sig_end - need + 1 : sig_end + 1]
-    kept = [float(sl_c[0])]
-    last = int(sl_t[0])
-    for j in range(1, len(sl_t)):
-        dt = int(sl_t[j]) - last
-        if 30_000 <= dt <= 90_000:
-            kept.append(float(sl_c[j]))
-            last = int(sl_t[j])
-        elif dt > 90_000:
-            kept = [float(sl_c[j])]
-            last = int(sl_t[j])
-    if len(kept) < 12:
-        kept = [float(x) for x in sl_c]
+    kept = _resample_1m(sl_t, sl_c)
     if len(kept) < 12:
         return None
     arr = np.asarray(kept, dtype=np.float64)

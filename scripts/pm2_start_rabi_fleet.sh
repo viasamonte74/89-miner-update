@@ -141,10 +141,14 @@ print("seeded HF claims:", sorted(p.name for p in hf_claim.glob("*.json")))
 PY
 
 start_lf() {
+  # LF launcher. Defaults = rank-15 earner gates (tunable per hotkey at call site).
   local name="$1" hotkey="$2" rank="$3" state="$4" log="$5" stop="$6" siblings="$7" hf_log="$8"
-  local quality_floor="${9:-0}"
-  local wash_avoid="${10:-0}"
+  local quality_floor="${9:-0.88}"
+  local wash_avoid="${10:-1}"
   local max_day="${11:-2}"
+  local early_score="${12:-0.88}"
+  local vol_early="${13:-1.55}"
+  local vol_submit="${14:-1.40}"
   pm2 delete "$name" >/dev/null 2>&1 || true
   SN89_REPO="$SN89_REPO" \
   SN89_DATA_ROOT="$SN89_DATA_ROOT" \
@@ -164,20 +168,36 @@ start_lf() {
   SN89_STRICT_PREFER_SHORT=0 \
   SN89_LF_QUALITY_FLOOR="$quality_floor" \
   SN89_LF_QUALITY_ONLY=1 \
+  SN89_LF_ALLOW_QUALITY_SUBMIT=0 \
   SN89_LF_MAX_PER_DAY="$max_day" \
   SN89_LF_PREFER_PAIRS= \
   SN89_LF_PREFER_MULT=1.0 \
   SN89_FLEET_PRIORS_MODE=off \
   SN89_LF_WASH_AVOID="$wash_avoid" \
-  SN89_LF_WASH_AVOID_PAIRS=BTCUSD \
+  SN89_LF_WASH_HARD=1 \
+  SN89_LF_WASH_AVOID_PAIRS=BTCUSD,ETHUSD \
   SN89_LF_BLOCK_SIBLING_OPPOSITE=1 \
-  SN89_AUTO_MIN_VOL_BAND_EARLY=1.50 \
-  SN89_AUTO_MIN_VOL_BAND_SUBMIT=1.30 \
+  SN89_AUTO_EARLY_SCORE="$early_score" \
+  SN89_AUTO_MIN_VOL_BAND_EARLY="$vol_early" \
+  SN89_AUTO_MIN_VOL_BAND_SUBMIT="$vol_submit" \
+  SN89_AUTO_MIN_VOL_BAND_2H_EARLY=0.75 \
+  SN89_AUTO_MIN_VOL_BAND_2H_SUBMIT=0.70 \
+  SN89_AUTO_MAX_SAME_DIR_PER_DAY=1 \
   SN89_FLEET_HOTKEYS="${SN89_FLEET_HOTKEYS:-}" \
   SN89_NETWORK_LIVE_BLOCK=1 \
+  SN89_NETWORK_LIVE_BLOCK_PAIR=1 \
   pm2 start "$SN89_REPO/scripts/pm2_lf_auto.sh" \
     --name "$name" \
     --interpreter bash
+}
+
+stop_lf() {
+  # Park non-earner LF keys (h2/h3): no slots spent until they can qualify.
+  local name="$1" stop="$2"
+  pm2 delete "$name" >/dev/null 2>&1 || true
+  mkdir -p "$(dirname "$stop")"
+  touch "$stop"
+  echo "LF stopped (HF-only): $name stop=$stop"
 }
 
 start_hf() {
@@ -216,9 +236,11 @@ start_hf() {
   SN89_HF_LIVE_QUOTES=1 \
   SN89_HF_MAX_HORIZON_S=1800 \
   SN89_HF_BAR_REFRESH_S=60 \
+  SN89_HF_BAR_REFRESH_LIVE_S=900 \
+  SN89_HF_BAR_NO_PROGRESS_BACKOFF_S=900 \
   SN89_HF_BAR_MAX_AGE_MIN=12 \
   SN89_HF_BAR_HARD_MAX_AGE_MIN=45 \
-  SN89_HF_AUTO_PAIRS=SUIUSD,ALGOUSD,ADAUSD,KPEPEUSD,NEARUSD,ZROUSD \
+  SN89_HF_AUTO_PAIRS=SUIUSD,ALGOUSD,ADAUSD,KPEPEUSD,NEARUSD \
   SN89_HF_MAX_PER_DAY=8 \
   SN89_HF_MAX_PER_PAIR_PER_DAY=3 \
   SN89_HF_MIN_GAP_S=120 \
@@ -258,31 +280,36 @@ printf 'export SN89_FLEET_HOTKEYS="%s"\n' "$FLEET_HOTKEYS" \
   > "$SN89_DATA_ROOT/fleet_hotkeys.env"
 echo "SN89_FLEET_HOTKEYS=$SN89_FLEET_HOTKEYS"
 
-# h1: wash-avoid BTC, max 2 LF/day, prefer ZRO/TAO/DOT/XRP. h2/h3: quality floor.
+# All keys: LF + HF. Split gates:
+#   h1/h4 — rank-15 earners (≤2 HQ/day, score≥0.88, vol 1.55/1.40)
+#   h2/h3 — quality rebuild (≤2/day, score≥0.82, vol 1.45/1.30)
+rm -f "$SN89_DATA_ROOT"/STOP_AUTO_SUBMIT_H{1,2,3,4}
+
 start_lf sn89-rabi-h1 rabi-h1 0 \
   "$SN89_STATE_DIR/lf_auto_state_h1.json" "$LOG_H1" \
   "$SN89_DATA_ROOT/STOP_AUTO_SUBMIT_H1" \
   "$SIB_LF_1" \
-  "$HF_LOG_H1" 0 1 2
+  "$HF_LOG_H1" 0.88 1 2 0.88 1.55 1.40
 
 start_lf sn89-rabi-h2 rabi-h2 0 \
   "$SN89_STATE_DIR/lf_auto_state_h2.json" "$LOG_H2" \
   "$SN89_DATA_ROOT/STOP_AUTO_SUBMIT_H2" \
   "$SIB_LF_2" \
-  "$HF_LOG_H2" 0.85 0 2
+  "$HF_LOG_H2" 0.82 1 2 0.82 1.45 1.30
 
 start_lf sn89-rabi-h3 rabi-h3 0 \
   "$SN89_STATE_DIR/lf_auto_state_h3.json" "$LOG_H3" \
   "$SN89_DATA_ROOT/STOP_AUTO_SUBMIT_H3" \
   "$SIB_LF_3" \
-  "$HF_LOG_H3" 0.85 0 2
+  "$HF_LOG_H3" 0.82 1 2 0.82 1.45 1.30
 
 if [[ "$INCLUDE_H4" == "1" ]]; then
+  # h4: rank-15 twin; wins pay after warmup ~2026-10-20 18:30Z.
   start_lf sn89-rabi-h4 rabi-h4 0 \
     "$SN89_STATE_DIR/lf_auto_state_h4.json" "$LOG_H4" \
     "$SN89_DATA_ROOT/STOP_AUTO_SUBMIT_H4" \
     "${LOG_H1}:${LOG_H2}:${LOG_H3}" \
-    "$HF_LOG_H4" 0 0 2
+    "$HF_LOG_H4" 0.88 1 2 0.88 1.55 1.40
 fi
 
 start_hf sn89-rabi-hf-h1 rabi-h1 0 \
@@ -317,4 +344,5 @@ fi
 #   grep -n FEED_TOKEN ~/.pm2/dump.pm2 && echo "edit/remove those env entries, then pm2 resurrect"
 pm2 save
 pm2 list
-echo "Fleet OK: LF+HF (h1/h2/h3$([ "$INCLUDE_H4" = 1 ] && echo '/h4')). Tokens load only inside pm2_*_auto.sh."
+echo "Fleet OK: LF+HF h1–h3$([ "$INCLUDE_H4" = 1 ] && echo '/h4'). h1/h4 rank-15 gates; h2/h3 quality rebuild; HF fade 2σ ≤8/day."
+echo "Tokens load only inside pm2_*_auto.sh."

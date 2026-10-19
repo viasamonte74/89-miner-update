@@ -164,8 +164,18 @@ LF_WASH_AVOID = os.environ.get("SN89_LF_WASH_AVOID", "0").strip() not in (
     "false",
     "False",
 )
+# When wash-avoid is on, hard-skip those pairs (don't just down-weight).
+LF_WASH_HARD = os.environ.get("SN89_LF_WASH_HARD", "1").strip() not in (
+    "0",
+    "false",
+    "False",
+)
 BLOCK_SIBLING_OPPOSITE = os.environ.get(
     "SN89_LF_BLOCK_SIBLING_OPPOSITE", "1"
+).strip() not in ("0", "false", "False")
+# Block both directions on a pair if any non-fleet miner has it open (anti-copy).
+NETWORK_LIVE_BLOCK_PAIR = os.environ.get(
+    "SN89_NETWORK_LIVE_BLOCK_PAIR", "1"
 ).strip() not in ("0", "false", "False")
 BAR_MAX_AGE_H = float(os.environ.get("SN89_LF_BAR_MAX_AGE_H", "3.0"))
 # Soft-downs only (wash control). No hand-tuned pair boosts — those re-decide go/no-go.
@@ -358,15 +368,30 @@ def _fleet_ss58() -> set[str]:
 def _network_blocked_trades(
     now: float, *, force: bool = False
 ) -> set[tuple[str, str]]:
-    """Block (pair,dir) already pending on any non-fleet hotkey (anti-copy)."""
+    """Block trades already pending on any non-fleet hotkey (anti-copy).
+
+    Default: block the whole pair (both dirs) whenever another miner has it
+    open — copy flags accrue on same-side shadowing; pair occupancy is the
+    safer gate while h1 sits near the habitual-copier threshold.
+    """
     if os.environ.get("SN89_NETWORK_LIVE_BLOCK", "1").strip() in (
         "0",
         "false",
         "False",
     ):
         return set()
+    fleet = _fleet_ss58()
+    if NETWORK_LIVE_BLOCK_PAIR:
+        pairs = network_live.network_live_pairs(
+            now, exclude_hotkeys=fleet, force=force
+        )
+        out: set[tuple[str, str]] = set()
+        for pair in pairs:
+            out.add((pair, "LONG"))
+            out.add((pair, "SHORT"))
+        return out
     return network_live.network_live_trades(
-        now, exclude_hotkeys=_fleet_ss58(), force=force
+        now, exclude_hotkeys=fleet, force=force
     )
 
 
@@ -468,6 +493,8 @@ def _iter_actionable(
     for r in ranked:
         pair = str(r.get("pair") or "").upper()
         if fleet_priors.lf_pair_blocked(pair):
+            continue
+        if LF_WASH_AVOID and LF_WASH_HARD and pair in LF_WASH_AVOID_PAIRS:
             continue
         vol = float(r.get("vol_band") or 0.0)
         vol2 = float(r.get("vol_band_2h") or 0.0)
@@ -960,15 +987,20 @@ def run(
             "strict_prefer_short": bool(STRICT_MODE and STRICT_PREFER_SHORT),
             "lf_quality_floor": LF_QUALITY_FLOOR,
             "lf_wash_avoid": LF_WASH_AVOID,
+            "lf_wash_hard": LF_WASH_HARD,
             "lf_wash_avoid_pairs": sorted(LF_WASH_AVOID_PAIRS) if LF_WASH_AVOID else [],
             "block_sibling_opposite": BLOCK_SIBLING_OPPOSITE,
+            "network_live_block_pair": NETWORK_LIVE_BLOCK_PAIR,
             "direction": direction,
             "pairs": pairs,
             "poll_s": poll_s,
             "early_score": early_score,
             "finalize_min": finalize_min,
+            "early_score": early_score,
             "min_vol_band_early": min_vol_band_early,
             "min_vol_band_submit": min_vol_band_submit,
+            "min_vol_band_2h_early": MIN_VOL_BAND_2H_EARLY,
+            "min_vol_band_2h_submit": MIN_VOL_BAND_2H_SUBMIT,
             "early_min_elapsed_min": early_min_elapsed_min,
             "pick_rank": pick_rank,
             "sibling_logs": [str(p) for p in _sibling_log_paths()],
@@ -1201,7 +1233,8 @@ def run(
             )
 
         # Cascade + exclusive fleet claim: never submit a live sibling (pair,dir).
-        # Quality-only: early vol floor first, then quality_submit (submit vol + score).
+        # Quality-only (rank-15 plan): only the strict early gate — score + early
+        # vol floors. No softer quality_submit path that fires mid-vol setups.
         target = None
         early = False
         want_early = early_time
@@ -1209,13 +1242,17 @@ def run(
         phases: list[tuple[bool, bool, str]] = []
         if want_early:
             phases.append((True, False, "early"))
-            if QUALITY_ONLY:
+            if QUALITY_ONLY and os.environ.get(
+                "SN89_LF_ALLOW_QUALITY_SUBMIT", "0"
+            ).strip() not in ("0", "false", "False"):
+                # Opt-in only — default off to protect Wilson LB / wash rate.
                 phases.append((False, True, "quality_submit"))
         if (not QUALITY_ONLY) and (finalize or eod_force or catch_up):
             # Weak EOD/catch-up/finalize: require early-quality gates (fewer washes).
             use_early_gates = bool(SKIP_WEAK_EOD) or want_early
             phases.append((use_early_gates, False, "finalize_like"))
         phase_used = ""
+        net_blocked = _network_blocked_trades(now)
         for use_early, require_score, phase_name in phases:
             for cand in _iter_actionable(
                 ranked,
@@ -1229,14 +1266,15 @@ def run(
                 d_use = cand.get("direction") or (
                     "LONG" if direction == "AUTO" else direction
                 )
-                # Skip crowded network (pair,dir) before claiming — anti-copy.
-                if (cand["pair"], d_use) in _network_blocked_trades(now):
+                # Skip crowded network before claiming — anti-copy.
+                if (cand["pair"], d_use) in net_blocked:
                     _log(
                         {
                             "event": "skip_network_live",
                             "pair": cand["pair"],
                             "direction": d_use,
                             "phase": "pre_claim",
+                            "block_pair": NETWORK_LIVE_BLOCK_PAIR,
                         }
                     )
                     continue

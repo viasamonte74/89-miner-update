@@ -69,6 +69,10 @@ LF_CLAIM_DIR = Path(
 # fade-spike fires ~10×/pair/day — raise via env after the fade path is live.
 MAX_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_DAY", "8"))
 SERIES_MAX_TIP_AGE_S = float(os.environ.get("SN89_HF_SERIES_MAX_TIP_AGE_S", "120"))
+# Watchdog: consecutive loops with all live quotes missing/stale → alert.
+QUOTE_DEAD_ALERT_LOOPS = int(os.environ.get("SN89_HF_QUOTE_DEAD_ALERT_LOOPS", "3"))
+NO_CALL_ALERT_S = float(os.environ.get("SN89_HF_NO_CALL_ALERT_S", str(6 * 3600)))
+WATCHDOG_LOG_GAP_S = float(os.environ.get("SN89_HF_WATCHDOG_LOG_GAP_S", "300"))
 # Cap concentration on one pair per UTC day (SUI dominated prior book).
 MAX_PER_PAIR_PER_DAY = int(os.environ.get("SN89_HF_MAX_PER_PAIR_PER_DAY", "6"))
 MIN_GAP_S = float(os.environ.get("SN89_HF_MIN_GAP_S", "120"))  # polite; protocol ~250ms
@@ -127,9 +131,15 @@ PAIR_LOCK_S = float(os.environ.get("SN89_PAIR_LOCK_S", str(hf_mod.PAIR_LOCK_S)))
 # Prefer faster 30m horizons when scoring equal
 PREFER_HZ_S = int(os.environ.get("SN89_HF_PREFER_HZ_S", "1800"))
 # Archive 1m bars often lag ~10–15m; live quotes + hist cover the tip.
-# BAR_MAX_AGE_MIN: trigger refresh / "parquet fresh" threshold.
+# BAR_MAX_AGE_MIN: "parquet fresh" threshold (soft).
 # BAR_HARD_MAX_AGE_MIN: refuse to score if parquet older than this (even with live).
+# With LIVE_QUOTES, do not thrash rebuilds every 60s when the archive cannot
+# catch BAR_MAX — use BAR_REFRESH_LIVE_S and a no-progress backoff instead.
 BAR_REFRESH_S = float(os.environ.get("SN89_HF_BAR_REFRESH_S", "60"))
+BAR_REFRESH_LIVE_S = float(os.environ.get("SN89_HF_BAR_REFRESH_LIVE_S", "900"))
+BAR_NO_PROGRESS_BACKOFF_S = float(
+    os.environ.get("SN89_HF_BAR_NO_PROGRESS_BACKOFF_S", "900")
+)
 BAR_MAX_AGE_MIN = float(os.environ.get("SN89_HF_BAR_MAX_AGE_MIN", "12"))
 BAR_HARD_MAX_AGE_MIN = float(os.environ.get("SN89_HF_BAR_HARD_MAX_AGE_MIN", "45"))
 # Diversity guard (P0): stay above floor+margin before n hits the hard gate.
@@ -505,12 +515,11 @@ def _set_reject_cooldown(pair: str, now: float, reason: str | None) -> None:
     _save_state(st)
 
 
-def _refresh_bars(pairs: list[str]) -> bool:
+def _refresh_bars(pairs: list[str]) -> str:
     """Rebuild 1m bars; non-blocking flock so LF's long rebuild cannot stall HF.
 
-    Returns True if this process ran a refresh or confirmed bars are fresh enough.
-    Returns False if another process holds the lock (caller should score on
-    existing parquet + live quotes when under the hard age ceiling).
+    Returns ``"busy"`` | ``"skip"`` (already soft-fresh) | ``"built"``.
+    Caller scores on existing parquet + live quotes when under the hard age ceiling.
     """
     from miner_ext.backtest.bars import build_bars
 
@@ -528,23 +537,25 @@ def _refresh_bars(pairs: list[str]) -> bool:
                     "age_min": round(_bars_age_min() or -1, 1),
                 }
             )
-            return False
+            return "busy"
         try:
             age = _bars_age_min()
             if age is not None and age < BAR_MAX_AGE_MIN:
                 _log({"event": "bars_fresh_skip", "age_min": round(age, 1)})
-                return True
+                return "skip"
             t0 = time.time()
             _log({"event": "bars_refresh_start", "n_pairs": len(pairs), "age_min": age})
             build_bars(pairs=pairs)
+            age_after = _bars_age_min()
             _log(
                 {
                     "event": "bars_refresh_done",
                     "wall_s": round(time.time() - t0, 1),
-                    "age_min": round(_bars_age_min() or -1, 1),
+                    "age_min": round(age_after or -1, 1),
+                    "age_before_min": round(age or -1, 1),
                 }
             )
-            return True
+            return "built"
         finally:
             fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
 
@@ -641,6 +652,24 @@ def _last_attempt_ts(now: float) -> float | None:
             continue
         ts = float(o.get("ts") or 0)
         if _day_id(ts) == day:
+            last = ts if last is None else max(last, ts)
+    return last
+
+
+def _last_submit_ok_ts() -> float | None:
+    """Latest successful submit_ok in this hotkey's log (any day)."""
+    if not LOG.exists():
+        return None
+    last = None
+    for line in LOG.read_text(encoding="utf-8").splitlines():
+        try:
+            o = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if o.get("event") != "submit_ok" or not o.get("ok", True):
+            continue
+        ts = float(o.get("ts") or 0)
+        if ts > 0:
             last = ts if last is None else max(last, ts)
     return last
 
@@ -859,9 +888,18 @@ def rank_hf(
     *,
     wallet=None,
     subs: list[tuple] | None = None,
-) -> list[dict]:
+) -> tuple[list[dict], dict]:
+    """Return (ranked candidates, quote_stats).
+
+    quote_stats tracks live-feed health so a dead partner SSE cannot stall
+    the fleet with silent ``continue``s.
+    """
     board = hf_mod.hf_bands_as_of(now) or {}
-    out = []
+    out: list[dict] = []
+    live_attempted = 0
+    live_missing = 0
+    live_stale = 0
+    missing_pairs: list[str] = []
     for pair in pairs:
         row = board.get(pair)
         if not row:
@@ -875,11 +913,16 @@ def rank_hf(
         dirs: tuple[str, ...]
         if DIR_MODE == "fade_spike":
             # Fail closed: fade needs a fresh live tip (and series tip < 2 min).
-            # Stale bars + missing quote previously invented fake ≥1.75σ spikes.
-            if LIVE_QUOTES and (
-                live is None or not hf_live_quotes.quote_is_fresh(live, now=now)
-            ):
-                continue
+            if LIVE_QUOTES:
+                live_attempted += 1
+                if live is None:
+                    live_missing += 1
+                    missing_pairs.append(pair)
+                    continue
+                if not hf_live_quotes.quote_is_fresh(live, now=now):
+                    live_stale += 1
+                    missing_pairs.append(pair)
+                    continue
             series = _series_for_score(pair, cache, now=now, live_quote=live)
             if series is None:
                 continue
@@ -914,7 +957,26 @@ def rank_hf(
             if r is not None:
                 out.append(r)
     out.sort(key=lambda r: -r["score"])
-    return out
+    quote_stats = {
+        "live_attempted": live_attempted,
+        "live_missing": live_missing,
+        "live_stale": live_stale,
+        "missing_pairs": missing_pairs,
+    }
+    if LIVE_QUOTES and DIR_MODE == "fade_spike" and live_attempted > 0:
+        bad = live_missing + live_stale
+        if bad > 0:
+            _log(
+                {
+                    "event": "live_quote_missing",
+                    "missing": live_missing,
+                    "stale": live_stale,
+                    "attempted": live_attempted,
+                    "pairs": missing_pairs[:12],
+                    "all_dead": bad >= live_attempted,
+                }
+            )
+    return out, quote_stats
 
 
 def run(
@@ -929,7 +991,11 @@ def run(
     hk = w.hotkey.ss58_address
     cache: dict = {}
     last_bar_refresh = 0.0
+    bars_backoff_until = 0.0
     last_bypass_log = 0.0
+    quote_dead_streak = 0
+    last_watchdog_log = 0.0
+    last_any_call_ts = _last_submit_ok_ts()
     _log(
         {
             "event": "start",
@@ -947,6 +1013,8 @@ def run(
             "max_per_pair_per_day": MAX_PER_PAIR_PER_DAY,
             "poll_s_default": POLL_S,
             "bar_refresh_s": BAR_REFRESH_S,
+            "bar_refresh_live_s": BAR_REFRESH_LIVE_S,
+            "bar_no_progress_backoff_s": BAR_NO_PROGRESS_BACKOFF_S,
             "free_best": FREE_BEST,
             "strict_mode": STRICT_MODE,
             "strict_both_dirs": STRICT_BOTH_DIRS,
@@ -1018,22 +1086,53 @@ def run(
         ages = [a for a in (_bars_age_min(p) for p in pairs) if a is not None]
         age = (sorted(ages)[len(ages) // 2] if ages else None)  # median of known pairs
         fresh_n = sum(1 for a in ages if a <= BAR_MAX_AGE_MIN)
-        # Refresh when due, but skip thrash if archive cannot beat BAR_MAX_AGE
-        # (refresh still runs on the interval so new minutes land when available).
-        if now - last_bar_refresh >= BAR_REFRESH_S or (
-            age is not None and age > BAR_MAX_AGE_MIN and now - last_bar_refresh >= 60.0
-        ):
+        # Refresh policy:
+        #  - LIVE_QUOTES + under hard age: long interval only (archive often stays
+        #    ~20–30m old; 60s retries burn ~3min/build and stall scoring).
+        #  - After a build that does not clear BAR_MAX_AGE: backoff.
+        #  - Past hard age: still try every 60s (need parquet somehow).
+        over_hard = age is None or age > BAR_HARD_MAX_AGE_MIN
+        in_backoff = now < bars_backoff_until and not over_hard
+        if LIVE_QUOTES and not over_hard:
+            due = (now - last_bar_refresh) >= BAR_REFRESH_LIVE_S
+        else:
+            due = (now - last_bar_refresh) >= BAR_REFRESH_S or (
+                age is not None
+                and age > BAR_MAX_AGE_MIN
+                and (now - last_bar_refresh) >= 60.0
+            )
+        if due and not in_backoff:
             try:
-                did = _refresh_bars(pairs)
-                # Only advance the refresh timer on success; if lock busy, retry soon
-                # but still fall through to score when under hard age + live quotes.
-                if did:
-                    last_bar_refresh = time.time()
+                status = _refresh_bars(pairs)
+                if status == "busy":
+                    # Someone else is rebuilding; with live quotes just wait the
+                    # long interval instead of retrying every poll.
+                    if LIVE_QUOTES and not over_hard:
+                        last_bar_refresh = now
+                    else:
+                        last_bar_refresh = now - BAR_REFRESH_S + min(30.0, poll_s)
                 else:
-                    last_bar_refresh = now - BAR_REFRESH_S + min(30.0, poll_s)
-                ages = [a for a in (_bars_age_min(p) for p in pairs) if a is not None]
-                age = sorted(ages)[len(ages) // 2] if ages else None
-                fresh_n = sum(1 for a in ages if a <= BAR_MAX_AGE_MIN)
+                    last_bar_refresh = time.time()
+                    ages = [
+                        a for a in (_bars_age_min(p) for p in pairs) if a is not None
+                    ]
+                    age = sorted(ages)[len(ages) // 2] if ages else None
+                    fresh_n = sum(1 for a in ages if a <= BAR_MAX_AGE_MIN)
+                    if (
+                        status == "built"
+                        and age is not None
+                        and age > BAR_MAX_AGE_MIN
+                    ):
+                        bars_backoff_until = time.time() + BAR_NO_PROGRESS_BACKOFF_S
+                        _log(
+                            {
+                                "event": "bars_refresh_no_progress",
+                                "age_min": round(age, 1),
+                                "soft_max_min": BAR_MAX_AGE_MIN,
+                                "backoff_s": BAR_NO_PROGRESS_BACKOFF_S,
+                                "live_quotes": LIVE_QUOTES,
+                            }
+                        )
             except Exception as e:  # noqa: BLE001
                 _log(
                     {
@@ -1043,7 +1142,12 @@ def run(
                     }
                 )
                 last_bar_refresh = now
+                if LIVE_QUOTES:
+                    bars_backoff_until = now + min(300.0, BAR_NO_PROGRESS_BACKOFF_S)
             cache.clear()
+        elif in_backoff and due:
+            # Keep scoring; do not pile onto a futile archive lag.
+            last_bar_refresh = now
         # Hard ceiling: parquet too old to trust σ / lookback.
         if not ages or age is None or age > BAR_HARD_MAX_AGE_MIN:
             _sleep(
@@ -1093,7 +1197,54 @@ def run(
             )
 
         cache.clear()
-        ranked = rank_hf(pairs, now, cache, wallet=w, subs=subs)
+        ranked, quote_stats = rank_hf(pairs, now, cache, wallet=w, subs=subs)
+        attempted = int(quote_stats.get("live_attempted") or 0)
+        bad_quotes = int(quote_stats.get("live_missing") or 0) + int(
+            quote_stats.get("live_stale") or 0
+        )
+        if attempted > 0 and bad_quotes >= attempted:
+            quote_dead_streak += 1
+        else:
+            quote_dead_streak = 0
+        if (
+            quote_dead_streak >= QUOTE_DEAD_ALERT_LOOPS
+            and now - last_watchdog_log >= WATCHDOG_LOG_GAP_S
+        ):
+            last_watchdog_log = now
+            _log(
+                {
+                    "event": "watchdog_alert",
+                    "kind": "live_quote_dead",
+                    "streak_loops": quote_dead_streak,
+                    "missing": quote_stats.get("live_missing"),
+                    "stale": quote_stats.get("live_stale"),
+                    "attempted": attempted,
+                    "pairs": quote_stats.get("missing_pairs"),
+                }
+            )
+        if last_any_call_ts is None or (now - last_any_call_ts) >= NO_CALL_ALERT_S:
+            if now - last_watchdog_log >= WATCHDOG_LOG_GAP_S:
+                # Prefer surfacing feed death when that explains the silence.
+                kind = (
+                    "no_call_live_quote_dead"
+                    if quote_dead_streak >= QUOTE_DEAD_ALERT_LOOPS
+                    else "no_call"
+                )
+                last_watchdog_log = now
+                _log(
+                    {
+                        "event": "watchdog_alert",
+                        "kind": kind,
+                        "silent_s": (
+                            None
+                            if last_any_call_ts is None
+                            else round(now - last_any_call_ts, 1)
+                        ),
+                        "quote_dead_streak": quote_dead_streak,
+                        "live_missing": quote_stats.get("live_missing"),
+                        "live_attempted": attempted,
+                    }
+                )
         board_best = float(ranked[0]["score"]) if ranked else 0.0
         pair_counts = _pair_counts_today(now)
         quality = [
@@ -1295,6 +1446,7 @@ def run(
         kind = resp.get("kind")
         ok = kind == "hf.receipt" and resp.get("verified", True)
         if ok:
+            last_any_call_ts = time.time()
             _log(
                 {
                     "event": "submit_ok",
@@ -1317,7 +1469,7 @@ def run(
             st["last_submit"] = {
                 "pair": pair,
                 "direction": direction,
-                "ts": time.time(),
+                "ts": last_any_call_ts,
                 "ok": True,
             }
             _save_state(st)
